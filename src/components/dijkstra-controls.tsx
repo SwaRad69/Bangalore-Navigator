@@ -5,8 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { useDijkstraVisualizer } from "@/hooks/use-dijkstra-visualizer";
-import { MapPin, Play, Pause, StepForward, StepBack, RotateCcw } from "lucide-react";
+import { Play, Pause, StepForward, StepBack, RotateCcw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
 
 type DijkstraControlsProps = ReturnType<typeof useDijkstraVisualizer>;
 
@@ -95,23 +102,31 @@ export function DijkstraControls({
       </CardContent>
 
       <CardFooter className="flex-col items-start gap-4 border-t pt-4">
-        <h3 className="font-semibold">Current State</h3>
-        {currentStep ? (
-            <ScrollArea className="h-48 w-full text-sm">
-                <div className="p-4 rounded-md border bg-muted/50">
-                    <p className="font-bold">{currentStep.description}</p>
-                </div>
-                <Separator className="my-2" />
-                <div className="text-muted-foreground">
-                    <p className="font-bold mb-1">Reasoning:</p>
-                    <p>{currentStep.reasoning}</p>
-                </div>
-            </ScrollArea>
-        ) : (
-            <div className="flex items-center justify-center w-full h-48 rounded-md border p-4 text-sm text-muted-foreground bg-muted/50">
-                <p>Waiting to start algorithm...</p>
-            </div>
-        )}
+         <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="item-1">
+            <AccordionTrigger>
+               <h3 className="font-semibold">Show Explanation</h3>
+            </AccordionTrigger>
+            <AccordionContent>
+                {currentStep ? (
+                    <ScrollArea className="h-48 w-full text-sm">
+                        <div className="p-4 rounded-md border bg-muted/50">
+                            <p className="font-bold">{currentStep.description}</p>
+                        </div>
+                        <Separator className="my-2" />
+                        <div className="text-muted-foreground">
+                            <p className="font-bold mb-1">Reasoning:</p>
+                            <p>{currentStep.reasoning}</p>
+                        </div>
+                    </ScrollArea>
+                ) : (
+                    <div className="flex items-center justify-center w-full h-48 rounded-md border p-4 text-sm text-muted-foreground bg-muted/50">
+                        <p>Waiting to start algorithm...</p>
+                    </div>
+                )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </CardFooter>
     </Card>
   );
