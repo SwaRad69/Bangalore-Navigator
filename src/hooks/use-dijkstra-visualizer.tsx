@@ -35,15 +35,9 @@ const DijkstraVisualizerContext = createContext<DijkstraVisualizerContextType | 
 export const useDijkstraVisualizer = (graph?: Graph) => {
     const context = useContext(DijkstraVisualizerContext);
     if (!context) {
-        // This is a bit of a hack to allow the component to be used without a provider
-        // for the simple case where the graph is passed in directly.
-        // In a real app, you'd likely enforce the provider.
         if (!graph) {
             throw new Error("useDijkstraVisualizer must be used within a DijkstraVisualizerProvider or be provided with a graph");
         }
-        // This is a special case to create a "local" instance of the hook.
-        // We can't call the hook conditionally, so we have this workaround.
-        // This is not ideal and in a larger app, we'd enforce the provider pattern.
         return useDijkstraVisualizerLogic(graph);
     }
     return context;
@@ -78,72 +72,11 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
       timerRef.current = null;
     }
   };
-
-  useEffect(() => {
-    if (isPlaying && status === 'running') {
-      timerRef.current = setInterval(() => {
-        setCurrentStepIndex(prev => {
-          if (prev < steps.length - 1) {
-            return prev + 1;
-          } else {
-            setIsPlaying(false);
-            setStatus('finished');
-            clearTimer();
-            return prev;
-          }
-        });
-      }, 500);
-    } else {
-      clearTimer();
-    }
-    return clearTimer;
-  }, [isPlaying, status, steps.length]);
-
-  const handleNodeClick = useCallback((nodeId: string) => {
-    if (status === 'selecting-start') {
-      setStartNode(nodeId);
-      setStatus('selecting-end');
-      toast({ title: "Start node selected", description: "Now select the end node." });
-    } else if (status === 'selecting-end') {
-      if (nodeId === startNode) {
-        toast({ title: "Invalid Selection", description: "End node cannot be the same as the start node.", variant: "destructive" });
-        return;
-      }
-      setEndNode(nodeId);
-      setStatus('ready');
-      toast({ title: "End node selected", description: "Ready to run the algorithm." });
-    }
-  }, [status, startNode, toast]);
-
-  const setSelectionMode = useCallback((mode: 'start' | 'end') => {
-    // This function is kept for now in case we want to re-introduce buttons,
-    // but the primary flow is now direct-click.
-    if (mode === 'start') {
-      setStatus('selecting-start');
-      setStartNode(null);
-      setEndNode(null);
-      setShortestPath([]);
-      setAiStyle(null);
-      setCurrentStepIndex(0);
-      setSteps([]);
-      setIsPlaying(false);
-      clearTimer();
-      toast({ title: "Select Start Node", description: "Click a node on the map to set it as the starting point." });
-    } else if (mode === 'end') {
-      if (!startNode) {
-        toast({ title: "Select Start First", description: "You must select a start point before an end point.", variant: "destructive" });
-      } else {
-        setStatus('selecting-end');
-        toast({ title: "Select End Node", description: "Click a node on the map to set it as the destination." });
-      }
-    }
-  }, [startNode, toast]);
-
-  const run = useCallback(async () => {
-    if (!startNode || !endNode) return;
+  
+  const run = useCallback(async (start: string, end: string) => {
     setStatus('running');
     setIsPlaying(true);
-    const dijkstraSteps = dijkstra(graph, startNode, endNode);
+    const dijkstraSteps = dijkstra(graph, start, end);
     setSteps(dijkstraSteps);
     const finalPath = dijkstraSteps[dijkstraSteps.length - 1]?.path ?? [];
     setShortestPath(finalPath);
@@ -177,7 +110,47 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
         });
     }
 
-  }, [graph, startNode, endNode, toast]);
+  }, [graph, toast]);
+
+  useEffect(() => {
+    if (isPlaying && status === 'running') {
+      timerRef.current = setInterval(() => {
+        setCurrentStepIndex(prev => {
+          if (prev < steps.length - 1) {
+            return prev + 1;
+          } else {
+            setIsPlaying(false);
+            setStatus('finished');
+            clearTimer();
+            return prev;
+          }
+        });
+      }, 500);
+    } else {
+      clearTimer();
+    }
+    return clearTimer;
+  }, [isPlaying, status, steps.length]);
+
+  const handleNodeClick = useCallback((nodeId: string) => {
+    if (status === 'selecting-start') {
+      setStartNode(nodeId);
+      setStatus('selecting-end');
+      toast({ title: "Start node selected", description: "Now select the end node." });
+    } else if (status === 'selecting-end') {
+      if (nodeId === startNode) {
+        toast({ title: "Invalid Selection", description: "End node cannot be the same as the start node.", variant: "destructive" });
+        return;
+      }
+      setEndNode(nodeId);
+      setStatus('ready');
+      toast({ title: "End node selected", description: "Running the algorithm." });
+      if (startNode) {
+        run(startNode, nodeId);
+      }
+    }
+  }, [status, startNode, toast, run]);
+
 
   const reset = useCallback(() => {
     setStatus('selecting-start');
@@ -280,7 +253,6 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     nodeStates,
     edgeStates,
     handleNodeClick,
-    setSelectionMode,
     run,
     reset,
     stepForward,

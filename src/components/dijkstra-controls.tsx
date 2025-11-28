@@ -16,7 +16,6 @@ export function DijkstraControls({
   currentStepIndex,
   steps,
   isPlaying,
-  run,
   reset,
   stepForward,
   stepBackward,
@@ -35,8 +34,8 @@ export function DijkstraControls({
       case 'selecting-end':
         const startNodeName = graph.nodes.find(n => n.id === startNode)?.name || 'start';
         return `Start point: ${startNodeName}. Now click on the map to choose an end location.`;
-      case 'ready':
-        return "Start and end points selected. Press 'Run' to visualize.";
+      case 'ready': // This state is now very brief
+        return "Start and end points selected. Running algorithm...";
       case 'running':
       case 'paused':
       case 'finished':
@@ -58,10 +57,6 @@ export function DijkstraControls({
       </CardHeader>
 
       <CardContent className="flex-grow flex flex-col gap-4">
-        <Button onClick={run} disabled={status !== 'ready'} className="w-full">
-          <Play className="mr-2 h-4 w-4" /> Run Dijkstra
-        </Button>
-
         {(isAlgorithmRunning || isFinished) && (
           <div className="space-y-4 pt-4 border-t">
             <h3 className="font-semibold">Visualization</h3>
