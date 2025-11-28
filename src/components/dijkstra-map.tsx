@@ -28,33 +28,9 @@ const stateColors = {
 
 export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyle, currentStep }: DijkstraMapProps) {
   const svgRef = React.useRef<SVGSVGElement>(null);
-  const [viewBox, setViewBox] = React.useState("0 0 800 900");
   const isMobile = useIsMobile();
 
-  React.useEffect(() => {
-    const svgElement = svgRef.current;
-    if (!svgElement) return;
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        const { width, height } = entry.contentRect;
-        setViewBox(`0 0 800 ${800 * (height / width)}`);
-      }
-    });
-
-    resizeObserver.observe(svgElement);
-    
-    // Set initial viewbox
-    const { width, height } = svgElement.getBoundingClientRect();
-    if (width > 0 && height > 0) {
-        setViewBox(`0 0 800 ${800 * (height / width)}`);
-    }
-
-
-    return () => {
-      resizeObserver.unobserve(svgElement);
-    };
-  }, []);
+  const viewBox = "-50 -50 850 950"; // Padded and fixed viewbox
 
   const pathD = aiStyle && edgeStates ? graph.edges.filter(edge => edgeStates[edge.id] === 'path').map(edge => {
     const sourceNode = graph.nodes.find(n => n.id === edge.source);
