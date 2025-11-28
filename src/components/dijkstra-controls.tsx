@@ -58,14 +58,9 @@ export function DijkstraControls({
       </CardHeader>
 
       <CardContent className="flex-grow flex flex-col gap-4">
-        <div className="flex gap-2">
-          <Button onClick={run} disabled={status !== 'ready'} className="w-full">
-            <Play className="mr-2 h-4 w-4" /> Run Dijkstra
-          </Button>
-          <Button onClick={reset} variant="outline">
-            <RotateCcw className="mr-2 h-4 w-4" /> Reset
-          </Button>
-        </div>
+        <Button onClick={run} disabled={status !== 'ready'} className="w-full">
+          <Play className="mr-2 h-4 w-4" /> Run Dijkstra
+        </Button>
 
         {(isAlgorithmRunning || isFinished) && (
           <div className="space-y-4 pt-4 border-t">
@@ -90,7 +85,10 @@ export function DijkstraControls({
           </div>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex-col gap-2 border-t pt-6">
+         <Button onClick={reset} variant="outline" className="w-full">
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset
+          </Button>
       </CardFooter>
     </Card>
   );
