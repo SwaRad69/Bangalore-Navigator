@@ -12,16 +12,25 @@ type Status = 'selecting-start' | 'selecting-end' | 'ready' | 'running' | 'pause
 const parseAIStyle = (styleString: string): AIStyle => {
   const style: AIStyle = { color: '#20B2AA', thickness: 3, glow: false };
   try {
-    styleString.split(';').forEach(part => {
-      const [key, value] = part.split(':').map(s => s.trim());
-      if (key.toLowerCase() === 'color') style.color = value;
-      else if (key.toLowerCase() === 'line thickness') style.thickness = parseInt(value, 10) || 3;
-      else if (key.toLowerCase() === 'special effects' && value.toLowerCase().includes('glow')) {
-        style.glow = true;
+    // A more robust parsing logic
+    const instructions = styleString.toLowerCase().split('\n').map(s => s.replace(/^-/, '').trim());
+    instructions.forEach(instruction => {
+      const [key, value] = instruction.split(':').map(s => s.trim());
+      if (key.includes('color')) {
+        const colorMatch = value.match(/(#[0-9a-f]{6})/);
+        if (colorMatch) style.color = colorMatch[0];
+      } else if (key.includes('thickness')) {
+        const thicknessMatch = value.match(/(\d+)/);
+        if (thicknessMatch) style.thickness = parseInt(thicknessMatch[0], 10);
+      } else if (key.includes('effects')) {
+        if (value.includes('glow')) {
+          style.glow = true;
+        }
       }
     });
   } catch (error) {
-    console.error("Failed to parse AI style string:", error);
+    console.error("Failed to parse AI style string:", styleString, error);
+    // Return a default style if parsing fails
     return { color: '#20B2AA', thickness: 4, glow: true };
   }
   return style;
@@ -72,13 +81,27 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
       timerRef.current = null;
     }
   };
+
+  const reset = useCallback(() => {
+    clearTimer();
+    setStatus('selecting-start');
+    setStartNode(null);
+    setEndNode(null);
+    setSteps([]);
+    setCurrentStepIndex(0);
+    setIsPlaying(false);
+    setShortestPath([]);
+    setAiStyle(null);
+  }, []);
   
   const run = useCallback(async (start: string, end: string) => {
     setStatus('running');
     setIsPlaying(true);
+    setCurrentStepIndex(0);
     const dijkstraSteps = dijkstra(graph, start, end);
     setSteps(dijkstraSteps);
-    const finalPath = dijkstraSteps[dijkstraSteps.length - 1]?.path ?? [];
+    const finalStep = dijkstraSteps[dijkstraSteps.length - 1];
+    const finalPath = finalStep?.path ?? [];
     setShortestPath(finalPath);
     
     if (finalPath.length > 0) {
@@ -113,7 +136,11 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   }, [graph, toast]);
 
   useEffect(() => {
-    if (isPlaying && status === 'running') {
+    if (isPlaying && (status === 'running' || status === 'paused')) {
+        if (status === 'paused') {
+            clearTimer();
+            return;
+        }
       timerRef.current = setInterval(() => {
         setCurrentStepIndex(prev => {
           if (prev < steps.length - 1) {
@@ -133,7 +160,10 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   }, [isPlaying, status, steps.length]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
-    if (status === 'selecting-start') {
+    if (status === 'running' || status === 'paused') return;
+
+    if (status === 'selecting-start' || status === 'finished' || !startNode) {
+      reset();
       setStartNode(nodeId);
       setStatus('selecting-end');
       toast({ title: "Start node selected", description: "Now select the end node." });
@@ -144,48 +174,40 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
       }
       setEndNode(nodeId);
       setStatus('ready');
-      toast({ title: "End node selected", description: "Running the algorithm." });
       if (startNode) {
         run(startNode, nodeId);
       }
     }
-  }, [status, startNode, toast, run]);
-
-
-  const reset = useCallback(() => {
-    setStatus('selecting-start');
-    setStartNode(null);
-    setEndNode(null);
-    setSteps([]);
-    setCurrentStepIndex(0);
-    setIsPlaying(false);
-    setShortestPath([]);
-    setAiStyle(null);
-    clearTimer();
-  }, []);
+  }, [status, startNode, toast, run, reset]);
 
   const stepForward = useCallback(() => {
     if (currentStepIndex < steps.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
-      if(currentStepIndex === steps.length - 2) {
+      setIsPlaying(false);
+      setStatus('paused');
+      const newIndex = currentStepIndex + 1;
+      setCurrentStepIndex(newIndex);
+      if(newIndex === steps.length - 1) {
         setStatus('finished');
-        setIsPlaying(false);
       }
     }
   }, [currentStepIndex, steps.length]);
 
   const stepBackward = useCallback(() => {
     if (currentStepIndex > 0) {
+      setIsPlaying(false);
+      setStatus('paused');
       setCurrentStepIndex(prev => prev - 1);
     }
   }, [currentStepIndex]);
 
   const togglePlayPause = useCallback(() => {
     if (status === 'finished') return;
+
     if (isPlaying) {
       setStatus('paused');
     } else {
-      if(currentStepIndex === steps.length -1) {
+      // If paused at the end, restart visualization from beginning
+      if(currentStepIndex === steps.length -1 && steps.length > 0) {
         setCurrentStepIndex(0);
       }
       setStatus('running');
@@ -196,23 +218,30 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   const currentStep = useMemo(() => steps[currentStepIndex], [steps, currentStepIndex]);
   const nodeStates = useMemo(() => {
     const states: Record<string, string> = {};
-    if (!currentStep) {
+    
+    if (startNode) states[startNode] = 'start';
+    if (endNode) states[endNode] = 'end';
+
+    if (status === 'finished' && shortestPath.length > 0) {
+        shortestPath.forEach(id => states[id] = 'path');
+        // Keep start and end distinct
         if (startNode) states[startNode] = 'start';
         if (endNode) states[endNode] = 'end';
         return states;
     }
 
-    if(status === 'finished') {
-      shortestPath.forEach(id => states[id] = 'path');
-    } else {
-       currentStep.visited.forEach(id => states[id] = 'visited');
-       if (currentStep.currentNodeId) {
+    if (!currentStep) return states;
+
+    currentStep.visited.forEach(id => states[id] = 'visited');
+    
+    if (currentStep.currentNodeId) {
         states[currentStep.currentNodeId] = 'current';
-       }
-       if (currentStep.type === 'neighbor' && currentStep.neighbor) {
-        states[currentStep.neighbor] = 'neighbor';
-       }
     }
+    if (currentStep.type === 'neighbor' && currentStep.neighbor) {
+        states[currentStep.neighbor] = 'neighbor';
+    }
+
+    // Always ensure start/end are correctly marked
     if (startNode) states[startNode] = 'start';
     if (endNode) states[endNode] = 'end';
 
@@ -221,7 +250,6 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
 
   const edgeStates = useMemo(() => {
     const states: Record<string, string> = {};
-    if(!currentStep) return states;
 
     if (status === 'finished' && shortestPath.length > 1) {
       for (let i = 0; i < shortestPath.length - 1; i++) {
@@ -230,7 +258,12 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
         const edge = graph.edges.find(e => (e.source === source && e.target === target) || (e.source === target && e.target === source));
         if (edge) states[edge.id] = 'path';
       }
-    } else if (currentStep.type === 'neighbor' && currentStep.currentNodeId && currentStep.neighbor) {
+      return states;
+    }
+
+    if(!currentStep) return states;
+
+    if (currentStep.type === 'neighbor' && currentStep.currentNodeId && currentStep.neighbor) {
       const edge = graph.edges.find(e => (e.source === currentStep.currentNodeId && e.target === currentStep.neighbor) || (e.source === currentStep.neighbor && e.target === currentStep.currentNodeId));
       if (edge) states[edge.id] = 'active';
     }
@@ -260,3 +293,5 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     togglePlayPause,
   };
 };
+
+    

@@ -26,6 +26,7 @@ function DijkstraVisualizerWithContext() {
                     onNodeClick={hookData.handleNodeClick}
                     aiStyle={hookData.aiStyle}
                     currentStep={hookData.currentStep}
+                    shortestPath={hookData.shortestPath}
                 />
                 </CardContent>
             </Card>
@@ -51,3 +52,5 @@ DijkstraVisualizerContainer.Explanation = Explanation;
 
 // Export the main component with the attached sub-component
 export const DijkstraVisualizer = DijkstraVisualizerContainer;
+
+    

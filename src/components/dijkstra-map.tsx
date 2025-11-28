@@ -14,21 +14,22 @@ interface DijkstraMapProps {
   onNodeClick: (nodeId: string) => void;
   aiStyle: AIStyle | null;
   currentStep: DijkstraStep | null;
+  shortestPath: string[];
 }
 
 const stateColors = {
   default: "hsl(var(--muted-foreground))",
   start: "hsl(var(--primary))",
   end: "hsl(var(--destructive))",
-  visited: "hsl(var(--secondary))",
-  current: "hsl(var(--primary))",
+  visited: "hsl(var(--secondary-foreground) / 0.5)",
+  current: "hsl(var(--accent))",
   neighbor: "hsl(var(--accent))",
   path: "hsl(var(--primary))",
 };
 
-const INITIAL_VIEWBOX = { x: -50, y: -50, width: 850, height: 950 };
+const INITIAL_VIEWBOX = { x: 0, y: 0, width: 800, height: 900 };
 
-export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyle, currentStep }: DijkstraMapProps) {
+export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyle, currentStep, shortestPath }: DijkstraMapProps) {
   const svgRef = React.useRef<SVGSVGElement>(null);
   const isMobile = useIsMobile();
   
@@ -40,14 +41,24 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
     const svg = svgRef.current;
     if (!svg) return;
 
-    const bbox = svg.getBBox();
-    const padding = 50; 
-    setViewBox({
-      x: bbox.x - padding,
-      y: bbox.y - padding,
-      width: bbox.width + padding * 2,
-      height: bbox.height + padding * 2,
-    });
+    // Use a timeout to ensure the DOM is ready for getBBox
+    const timer = setTimeout(() => {
+      try {
+        const bbox = svg.getBBox();
+        const padding = 50; 
+        setViewBox({
+          x: bbox.x - padding,
+          y: bbox.y - padding,
+          width: bbox.width + padding * 2,
+          height: bbox.height + padding * 2,
+        });
+      } catch(e) {
+        // Fallback if getBBox fails
+        setViewBox(INITIAL_VIEWBOX);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [graph]);
 
   const getPoint = (e: React.MouseEvent | React.TouchEvent) => {
@@ -97,8 +108,9 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
     const svgWidth = svgRef.current!.clientWidth;
     const svgHeight = svgRef.current!.clientHeight;
 
-    const dx = (currentPoint.x - startPoint.x) / (svgWidth / viewBox.width);
-    const dy = (currentPoint.y - startPoint.y) / (svgHeight / viewBox.height);
+    const dx = (currentPoint.x - startPoint.x) * (viewBox.width / svgWidth);
+    const dy = (currentPoint.y - startPoint.y) * (viewBox.height / svgHeight);
+
 
     setViewBox(vb => ({ ...vb, x: vb.x - dx, y: vb.y - dy }));
     setStartPoint(currentPoint);
@@ -128,12 +140,18 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
   const handleTouchEnd = () => handleMouseUp();
 
 
-  const pathD = aiStyle && edgeStates ? graph.edges.filter(edge => edgeStates[edge.id] === 'path').map(edge => {
-    const sourceNode = graph.nodes.find(n => n.id === edge.source);
-    const targetNode = graph.nodes.find(n => n.id === edge.target);
-    if (!sourceNode || !targetNode) return '';
-    return `M ${sourceNode.x} ${sourceNode.y} L ${targetNode.x} ${targetNode.y}`;
-  }).join(' ') : '';
+  const pathD = React.useMemo(() => {
+    if (shortestPath.length < 2) return '';
+    let d = '';
+    for (let i = 0; i < shortestPath.length - 1; i++) {
+        const sourceNode = graph.nodes.find(n => n.id === shortestPath[i]);
+        const targetNode = graph.nodes.find(n => n.id === shortestPath[i + 1]);
+        if (sourceNode && targetNode) {
+            d += `M ${sourceNode.x} ${sourceNode.y} L ${targetNode.x} ${targetNode.y} `;
+        }
+    }
+    return d.trim();
+  }, [shortestPath, graph.nodes]);
 
 
   return (
@@ -152,13 +170,15 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
       onTouchCancel={handleTouchEnd}
     >
       <defs>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="5" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        {aiStyle?.glow && (
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="5" result="coloredBlur" />
+                <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        )}
       </defs>
 
       {/* Edges */}
@@ -269,3 +289,5 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
     </svg>
   );
 }
+
+    
