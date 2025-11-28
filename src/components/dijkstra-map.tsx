@@ -26,11 +26,67 @@ const stateColors = {
   path: "hsl(var(--accent))",
 };
 
+const INITIAL_VIEWBOX = { x: -50, y: -50, width: 850, height: 950 };
+
 export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyle, currentStep }: DijkstraMapProps) {
   const svgRef = React.useRef<SVGSVGElement>(null);
   const isMobile = useIsMobile();
+  
+  const [viewBox, setViewBox] = React.useState(INITIAL_VIEWBOX);
+  const [isPanning, setIsPanning] = React.useState(false);
+  const [startPoint, setStartPoint] = React.useState({ x: 0, y: 0 });
 
-  const viewBox = "-50 -50 850 950"; // Padded and fixed viewbox
+  const getPoint = (e: React.MouseEvent | React.TouchEvent) => {
+    const CTM = svgRef.current?.getScreenCTM();
+    if (!CTM) return { x: 0, y: 0 };
+    
+    let clientX, clientY;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    return {
+      x: (clientX - CTM.e) / CTM.a,
+      y: (clientY - CTM.f) / CTM.d
+    };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    setStartPoint({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    const dx = (e.clientX - startPoint.x) / (svgRef.current!.clientWidth / viewBox.width);
+    const dy = (e.clientY - startPoint.y) / (svgRef.current!.clientHeight / viewBox.height);
+    setViewBox(vb => ({ ...vb, x: vb.x - dx, y: vb.y - dy }));
+    setStartPoint({ x: e.clientX, y: e.clientY });
+  };
+  
+  const handleMouseUp = () => setIsPanning(false);
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const point = getPoint(e);
+    const scale = e.deltaY < 0 ? 0.9 : 1.1;
+
+    setViewBox(vb => {
+      const newWidth = vb.width * scale;
+      const newHeight = vb.height * scale;
+      return {
+        width: newWidth,
+        height: newHeight,
+        x: vb.x + (point.x - vb.x) * (1 - scale),
+        y: vb.y + (point.y - vb.y) * (1 - scale)
+      };
+    });
+  };
 
   const pathD = aiStyle && edgeStates ? graph.edges.filter(edge => edgeStates[edge.id] === 'path').map(edge => {
     const sourceNode = graph.nodes.find(n => n.id === edge.source);
@@ -41,7 +97,16 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
 
 
   return (
-    <svg ref={svgRef} viewBox={viewBox} className="w-full h-full rounded-lg bg-card cursor-pointer">
+    <svg 
+      ref={svgRef} 
+      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`} 
+      className={cn("w-full h-full rounded-lg bg-card", isPanning ? "cursor-grabbing" : "cursor-grab")}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
+    >
       <defs>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="5" result="coloredBlur" />
