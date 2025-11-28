@@ -6,7 +6,7 @@ export interface Node {
 }
 
 export interface Edge {
-  id: string;
+  id:string;
   source: string;
   target: string;
   weight: number;
@@ -19,10 +19,11 @@ export interface Graph {
 
 export interface DijkstraStep {
   currentNodeId: string | null;
-  type: 'visiting' | 'neighbor' | 'finished-node' | 'path';
+  type: 'initial' | 'visiting' | 'neighbor' | 'finished-node' | 'path';
   distances: Record<string, number>;
   visited: Set<string>;
   description: string;
+  reasoning: string;
   path?: string[];
   neighbor?: string;
   queue?: { nodeId: string; distance: number }[];

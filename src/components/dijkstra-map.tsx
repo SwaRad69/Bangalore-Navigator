@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import type { Graph, AIStyle } from '@/lib/types';
+import type { Graph, AIStyle, DijkstraStep } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface DijkstraMapProps {
@@ -10,6 +10,7 @@ interface DijkstraMapProps {
   edgeStates: Record<string, string>;
   onNodeClick: (nodeId: string) => void;
   aiStyle: AIStyle | null;
+  currentStep: DijkstraStep | null;
 }
 
 const stateColors = {
@@ -22,7 +23,7 @@ const stateColors = {
   path: "hsl(var(--accent))",
 };
 
-export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyle }: DijkstraMapProps) {
+export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyle, currentStep }: DijkstraMapProps) {
   const svgRef = React.useRef<SVGSVGElement>(null);
   const [viewBox, setViewBox] = React.useState("0 0 800 900");
 
@@ -113,6 +114,9 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
           const isPathNode = state === 'path';
           const isStartOrEnd = state === 'start' || state === 'end';
           const isCurrent = state === 'current';
+
+          const distance = currentStep?.distances[node.id];
+          const showDistance = distance !== undefined && distance !== Infinity && distance > 0;
           
           return (
             <g key={node.id} onClick={() => onNodeClick(node.id)} className="cursor-pointer group">
@@ -133,6 +137,16 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
               >
                 {node.name}
               </text>
+               {showDistance && !isStartOrEnd && (
+                <text
+                  x={node.x}
+                  y={node.y + 24}
+                  textAnchor="middle"
+                  className="text-xs font-mono fill-primary pointer-events-none"
+                >
+                  {Math.round(distance)}
+                </text>
+              )}
             </g>
           );
         })}

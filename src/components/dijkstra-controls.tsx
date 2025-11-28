@@ -7,33 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { useDijkstraVisualizer } from "@/hooks/use-dijkstra-visualizer";
 import { MapPin, Play, Pause, StepForward, StepBack, RotateCcw, LocateFixed, Locate } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 type DijkstraControlsProps = ReturnType<typeof useDijkstraVisualizer>;
-
-const NodeSelector = ({ label, icon: Icon, nodes, value, onSelect, placeholder, disabled }: {
-  label: string,
-  icon: React.ElementType,
-  nodes: { id: string, name: string }[],
-  value: string | null,
-  onSelect: (value: string) => void,
-  placeholder: string,
-  disabled?: boolean
-}) => (
-  <div className="flex items-center gap-3">
-    <Icon className="h-5 w-5 text-muted-foreground" />
-    <Select value={value || ''} onValueChange={onSelect} disabled={disabled}>
-      <SelectTrigger className="flex-1">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {nodes.map(node => (
-          <SelectItem key={node.id} value={node.id}>{node.name}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-);
-
 
 export function DijkstraControls({
   status,
@@ -128,14 +104,21 @@ export function DijkstraControls({
         )}
       </CardContent>
 
-      <CardFooter className="flex-col items-start gap-2 border-t pt-4">
+      <CardFooter className="flex-col items-start gap-4 border-t pt-4">
         <h3 className="font-semibold">Current State</h3>
         {currentStep ? (
-            <ScrollArea className="h-24 w-full rounded-md border p-4 text-sm bg-muted/50">
-                <p><strong>Step {currentStepIndex + 1}/{steps.length}:</strong> {currentStep.description}</p>
+            <ScrollArea className="h-36 w-full text-sm">
+                <div className="p-4 rounded-md border bg-muted/50">
+                    <p className="font-bold">{currentStep.description}</p>
+                </div>
+                <Separator className="my-2" />
+                <div className="text-muted-foreground">
+                    <p className="font-bold mb-1">Reasoning:</p>
+                    <p>{currentStep.reasoning}</p>
+                </div>
             </ScrollArea>
         ) : (
-            <div className="flex items-center justify-center w-full h-24 rounded-md border p-4 text-sm text-muted-foreground bg-muted/50">
+            <div className="flex items-center justify-center w-full h-36 rounded-md border p-4 text-sm text-muted-foreground bg-muted/50">
                 <p>Waiting to start algorithm...</p>
             </div>
         )}

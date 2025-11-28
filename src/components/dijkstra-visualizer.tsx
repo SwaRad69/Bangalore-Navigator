@@ -19,6 +19,7 @@ export default function DijkstraVisualizer() {
             edgeStates={hookData.edgeStates}
             onNodeClick={hookData.handleNodeClick}
             aiStyle={hookData.aiStyle}
+            currentStep={hookData.currentStep}
           />
         </CardContent>
       </Card>

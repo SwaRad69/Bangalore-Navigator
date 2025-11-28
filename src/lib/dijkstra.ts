@@ -1,4 +1,4 @@
-import type { Graph, DijkstraStep, Node } from './types';
+import type { Graph, DijkstraStep } from './types';
 
 class PriorityQueue {
   private values: { nodeId: string; distance: number }[] = [];
@@ -33,6 +33,8 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
   const visited = new Set<string>();
   const adj: Record<string, { nodeId: string; weight: number }[]> = {};
 
+  const startNodeName = graph.nodes.find(n => n.id === startNodeId)?.name || 'start';
+
   graph.nodes.forEach(node => {
     distances[node.id] = node.id === startNodeId ? 0 : Infinity;
     previous[node.id] = null;
@@ -48,10 +50,11 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
 
   steps.push({
     currentNodeId: null,
-    type: 'visiting',
+    type: 'initial',
     distances: { ...distances },
     visited: new Set(visited),
-    description: `Starting algorithm. Initializing distances. Start node is ${graph.nodes.find(n => n.id === startNodeId)?.name}.`,
+    description: 'Algorithm started.',
+    reasoning: `We begin by setting the distance to the start node '${startNodeName}' to 0 and all other nodes to infinity. The start node is added to a priority queue, which always keeps the node with the smallest known distance at the front.`,
     queue: pq.clone(),
   });
 
@@ -64,19 +67,20 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
     if (visited.has(currentNodeId)) continue;
     visited.add(currentNodeId);
 
-    const currentNodeName = graph.nodes.find(n => n.id === currentNodeId)?.name;
+    const currentNodeName = graph.nodes.find(n => n.id === currentNodeId)?.name || 'current node';
 
     steps.push({
       currentNodeId,
       type: 'visiting',
       distances: { ...distances },
       visited: new Set(visited),
-      description: `Visiting node: ${currentNodeName}.`,
+      description: `Visiting ${currentNodeName}.`,
+      reasoning: `We pull '${currentNodeName}' from the priority queue because it has the smallest distance (${Math.round(distances[currentNodeId])}) of all unvisited nodes. We mark it as visited and will now explore its neighbors.`,
       queue: pq.clone(),
     });
 
     if (currentNodeId === endNodeId) {
-      break; 
+      break;
     }
 
     adj[currentNodeId].forEach(neighbor => {
@@ -86,7 +90,9 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
       }
       
       const distance = distances[currentNodeId] + weight;
-      const neighborName = graph.nodes.find(n => n.id === neighborId)?.name;
+      const neighborName = graph.nodes.find(n => n.id === neighborId)?.name || 'a neighbor';
+
+      const currentDist = distances[neighborId] === Infinity ? '∞' : Math.round(distances[neighborId]);
 
       steps.push({
           currentNodeId,
@@ -94,11 +100,13 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
           neighbor: neighborId,
           distances: { ...distances },
           visited: new Set(visited),
-          description: `Checking neighbor: ${neighborName}. Current distance: ${distances[neighborId] === Infinity ? '∞' : Math.round(distances[neighborId])}. New Path: ${Math.round(distance)}`,
+          description: `Checking neighbor: ${neighborName}.`,
+          reasoning: `We look at '${neighborName}', a neighbor of '${currentNodeName}'. The path to this neighbor through our current node has a total distance of ${Math.round(distance)}. The previously known shortest distance to this neighbor is ${currentDist}.`,
           queue: pq.clone(),
       });
 
       if (distance < distances[neighborId]) {
+        const oldDist = distances[neighborId] === Infinity ? 'infinity' : `${Math.round(distances[neighborId])}`;
         distances[neighborId] = distance;
         previous[neighborId] = currentNodeId;
         pq.enqueue(neighborId, distance);
@@ -108,7 +116,8 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
           neighbor: neighborId,
           distances: { ...distances },
           visited: new Set(visited),
-          description: `Shorter path to ${neighborName} found! Updating distance to ${Math.round(distance)}.`,
+          description: `Updating distance for ${neighborName}.`,
+          reasoning: `The new path to '${neighborName}' (${Math.round(distance)}) is shorter than the old one (${oldDist}). We update its distance and add it to the priority queue so it can be visited later.`,
           queue: pq.clone(),
         });
       }
@@ -119,7 +128,8 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
       type: 'finished-node',
       distances: { ...distances },
       visited: new Set(visited),
-      description: `Finished checking neighbors of ${currentNodeName}.`,
+      description: `Finished with ${currentNodeName}.`,
+      reasoning: `We have now checked all unvisited neighbors of '${currentNodeName}'. We will now select the next unvisited node with the smallest distance from the priority queue.`,
       queue: pq.clone(),
     });
   }
@@ -139,7 +149,8 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
       path: path,
       distances: { ...distances },
       visited: new Set(visited),
-      description: `Shortest path found with total distance: ${Math.round(distances[endNodeId])}.`,
+      description: 'Shortest path found!',
+      reasoning: `The algorithm is complete. The final path has a total distance of ${Math.round(distances[endNodeId])}. The path is highlighted on the map.`,
       queue: [],
     });
   } else {
@@ -150,6 +161,7 @@ export function dijkstra(graph: Graph, startNodeId: string, endNodeId: string): 
       distances: { ...distances },
       visited: new Set(visited),
       description: 'No path found.',
+      reasoning: `The destination node could not be reached from the start node, as there is no connecting path between them.`,
       queue: [],
     });
   }
