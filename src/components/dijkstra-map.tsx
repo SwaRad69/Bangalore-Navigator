@@ -4,6 +4,8 @@
 import * as React from 'react';
 import type { Graph, AIStyle, DijkstraStep } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 interface DijkstraMapProps {
   graph: Graph;
@@ -27,24 +29,30 @@ const stateColors = {
 export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyle, currentStep }: DijkstraMapProps) {
   const svgRef = React.useRef<SVGSVGElement>(null);
   const [viewBox, setViewBox] = React.useState("0 0 800 900");
+  const isMobile = useIsMobile();
 
   React.useEffect(() => {
+    const svgElement = svgRef.current;
+    if (!svgElement) return;
+
     const resizeObserver = new ResizeObserver(entries => {
       for (let entry of entries) {
-        const { width } = entry.contentRect;
-        // Maintain aspect ratio 8:9
-        setViewBox(`0 0 800 ${800 * 9/8}`);
+        const { width, height } = entry.contentRect;
+        setViewBox(`0 0 800 ${800 * (height / width)}`);
       }
     });
 
-    if (svgRef.current) {
-      resizeObserver.observe(svgRef.current);
+    resizeObserver.observe(svgElement);
+    
+    // Set initial viewbox
+    const { width, height } = svgElement.getBoundingClientRect();
+    if (width > 0 && height > 0) {
+        setViewBox(`0 0 800 ${800 * (height / width)}`);
     }
 
+
     return () => {
-      if (svgRef.current) {
-        resizeObserver.unobserve(svgRef.current);
-      }
+      resizeObserver.unobserve(svgElement);
     };
   }, []);
 
@@ -128,6 +136,9 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
           const isStartOrEnd = state === 'start' || state === 'end';
           const isCurrent = state === 'current';
 
+          const baseRadius = isMobile ? 12 : 8;
+          const activeRadius = isMobile ? 16 : 12;
+
           const distance = currentStep?.distances[node.id];
           const showDistance = distance !== undefined && distance !== Infinity && distance > 0;
           
@@ -136,7 +147,7 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
               <circle
                 cx={node.x}
                 cy={node.y}
-                r={isPathNode || isStartOrEnd || isCurrent ? "12" : "8"}
+                r={isPathNode || isStartOrEnd || isCurrent ? activeRadius : baseRadius}
                 fill={stateColors[state as keyof typeof stateColors] || stateColors.default}
                 stroke="hsl(var(--card))"
                 strokeWidth="2"
@@ -144,18 +155,24 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
               />
               <text
                 x={node.x}
-                y={node.y - 18}
+                y={node.y - (isMobile ? 20 : 18)}
                 textAnchor="middle"
-                className="text-xs font-sans fill-foreground pointer-events-none"
+                className={cn(
+                  "text-xs font-sans fill-foreground pointer-events-none",
+                  isMobile && "text-[10px]"
+                )}
               >
                 {node.name}
               </text>
                {showDistance && !isStartOrEnd && (
                 <text
                   x={node.x}
-                  y={node.y + 24}
+                  y={node.y + (isMobile ? 28 : 24)}
                   textAnchor="middle"
-                  className="text-xs font-mono fill-primary pointer-events-none"
+                  className={cn(
+                    "text-xs font-mono fill-primary pointer-events-none",
+                     isMobile && "text-[10px]"
+                  )}
                 >
                   {Math.round(distance)}
                 </text>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, createContext, useContext } from 'react';
 import type { Graph, DijkstraStep, AIStyle } from '@/lib/types';
 import { dijkstra } from '@/lib/dijkstra';
 import { optimizeRouteRendering, type OptimizeRouteRenderingInput } from '@/ai/flows/optimize-route-rendering';
@@ -27,7 +27,39 @@ const parseAIStyle = (styleString: string): AIStyle => {
   return style;
 };
 
-export const useDijkstraVisualizer = (graph: Graph) => {
+
+type DijkstraVisualizerContextType = ReturnType<typeof useDijkstraVisualizerLogic>;
+
+const DijkstraVisualizerContext = createContext<DijkstraVisualizerContextType | null>(null);
+
+export const useDijkstraVisualizer = (graph?: Graph) => {
+    const context = useContext(DijkstraVisualizerContext);
+    if (!context) {
+        // This is a bit of a hack to allow the component to be used without a provider
+        // for the simple case where the graph is passed in directly.
+        // In a real app, you'd likely enforce the provider.
+        if (!graph) {
+            throw new Error("useDijkstraVisualizer must be used within a DijkstraVisualizerProvider or be provided with a graph");
+        }
+        // This is a special case to create a "local" instance of the hook.
+        // We can't call the hook conditionally, so we have this workaround.
+        // This is not ideal and in a larger app, we'd enforce the provider pattern.
+        return useDijkstraVisualizerLogic(graph);
+    }
+    return context;
+};
+
+export const DijkstraVisualizerProvider = ({ graph, children }: { graph: Graph, children: React.ReactNode }) => {
+    const value = useDijkstraVisualizerLogic(graph);
+    return (
+        <DijkstraVisualizerContext.Provider value={value}>
+            {children}
+        </DijkstraVisualizerContext.Provider>
+    );
+};
+
+
+const useDijkstraVisualizerLogic = (graph: Graph) => {
   const [status, setStatus] = useState<Status>('idle');
   const [startNode, setStartNode] = useState<string | null>(null);
   const [endNode, setEndNode] = useState<string | null>(null);
