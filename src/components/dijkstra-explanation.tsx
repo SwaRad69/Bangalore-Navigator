@@ -27,14 +27,14 @@ export function DijkstraExplanation({ steps, currentStepIndex }: DijkstraExplana
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md p-0">
-        <SheetHeader className="p-6">
+        <SheetHeader className="p-6 pb-0">
           <SheetTitle>Algorithm Explanation</SheetTitle>
           <SheetDescription>
             A step-by-step breakdown of Dijkstra's algorithm in action.
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="h-[calc(100%-80px)]">
-          <div className="flex flex-col gap-2 p-6 pt-0">
+        <ScrollArea className="h-full">
+          <div className="flex flex-col gap-2 p-6">
             {steps.map((step, index) => (
               <div 
                 key={index}
@@ -50,6 +50,11 @@ export function DijkstraExplanation({ steps, currentStepIndex }: DijkstraExplana
                 <p className="text-muted-foreground">{step.reasoning}</p>
               </div>
             ))}
+            {steps.length === 0 && (
+                <div className="text-center text-muted-foreground p-8">
+                    Run the algorithm to see the explanation.
+                </div>
+            )}
           </div>
         </ScrollArea>
       </SheetContent>
