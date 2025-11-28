@@ -20,10 +20,10 @@ const stateColors = {
   default: "hsl(var(--muted-foreground))",
   start: "hsl(var(--primary))",
   end: "hsl(var(--destructive))",
-  visited: "hsl(var(--secondary-foreground))",
+  visited: "hsl(var(--secondary))",
   current: "hsl(var(--primary))",
   neighbor: "hsl(var(--accent))",
-  path: "hsl(var(--accent))",
+  path: "hsl(var(--primary))",
 };
 
 const INITIAL_VIEWBOX = { x: -50, y: -50, width: 850, height: 950 };
@@ -35,6 +35,20 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
   const [viewBox, setViewBox] = React.useState(INITIAL_VIEWBOX);
   const [isPanning, setIsPanning] = React.useState(false);
   const [startPoint, setStartPoint] = React.useState({ x: 0, y: 0 });
+
+  React.useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const bbox = svg.getBBox();
+    const padding = 50; 
+    setViewBox({
+      x: bbox.x - padding,
+      y: bbox.y - padding,
+      width: bbox.width + padding * 2,
+      height: bbox.height + padding * 2,
+    });
+  }, [graph]);
 
   const getPoint = (e: React.MouseEvent | React.TouchEvent) => {
     const CTM = svgRef.current?.getScreenCTM();
@@ -55,18 +69,39 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
     };
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    let point;
+    if ('touches' in e) {
+      if (e.touches.length > 1) return;
+      point = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      if (e.button !== 0) return;
+      point = { x: e.clientX, y: e.clientY };
+    }
+    
     setIsPanning(true);
-    setStartPoint({ x: e.clientX, y: e.clientY });
+    setStartPoint(point);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isPanning) return;
-    const dx = (e.clientX - startPoint.x) / (svgRef.current!.clientWidth / viewBox.width);
-    const dy = (e.clientY - startPoint.y) / (svgRef.current!.clientHeight / viewBox.height);
+    
+    let currentPoint;
+     if ('touches' in e) {
+      if (e.touches.length > 1) return;
+      currentPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      currentPoint = { x: e.clientX, y: e.clientY };
+    }
+
+    const svgWidth = svgRef.current!.clientWidth;
+    const svgHeight = svgRef.current!.clientHeight;
+
+    const dx = (currentPoint.x - startPoint.x) / (svgWidth / viewBox.width);
+    const dy = (currentPoint.y - startPoint.y) / (svgHeight / viewBox.height);
+
     setViewBox(vb => ({ ...vb, x: vb.x - dx, y: vb.y - dy }));
-    setStartPoint({ x: e.clientX, y: e.clientY });
+    setStartPoint(currentPoint);
   };
   
   const handleMouseUp = () => setIsPanning(false);
@@ -88,6 +123,11 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
     });
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => handleMouseDown(e);
+  const handleTouchMove = (e: React.TouchEvent) => handleMouseMove(e);
+  const handleTouchEnd = () => handleMouseUp();
+
+
   const pathD = aiStyle && edgeStates ? graph.edges.filter(edge => edgeStates[edge.id] === 'path').map(edge => {
     const sourceNode = graph.nodes.find(n => n.id === edge.source);
     const targetNode = graph.nodes.find(n => n.id === edge.target);
@@ -106,6 +146,10 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       <defs>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
