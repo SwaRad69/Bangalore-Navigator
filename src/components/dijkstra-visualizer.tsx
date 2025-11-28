@@ -1,9 +1,10 @@
+
 "use client";
 
-import { bengaluruGraph } from '@/lib/graph-data';
-import { useDijkstraVisualizer, DijkstraVisualizerProvider } from '@/hooks/use-dijkstra-visualizer.tsx';
+import { useDijkstraVisualizer } from '@/hooks/use-dijkstra-visualizer.tsx';
 import { DijkstraMap } from '@/components/dijkstra-map';
 import { DijkstraControls } from '@/components/dijkstra-controls';
+import { DijkstraExplanation } from '@/components/dijkstra-explanation';
 import { Card, CardContent } from "@/components/ui/card";
 
 function DijkstraVisualizerContainer() {
@@ -39,8 +40,14 @@ function Controls() {
     return <DijkstraControls {...hookData} />
 }
 
+function Explanation() {
+    const hookData = useDijkstraVisualizer();
+    return <DijkstraExplanation {...hookData} />
+}
+
 // Attach the Controls component to the main visualizer component
 DijkstraVisualizerContainer.Controls = Controls;
+DijkstraVisualizerContainer.Explanation = Explanation;
 
 // Export the main component with the attached sub-component
 export const DijkstraVisualizer = DijkstraVisualizerContainer;

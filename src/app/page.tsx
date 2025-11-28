@@ -14,7 +14,7 @@ export default function Home() {
           <DijkstraVisualizer.Controls />
         </Sidebar>
         <SidebarInset>
-          <main className="flex min-h-screen flex-col items-center bg-background p-4 sm:p-8">
+          <main className="relative flex min-h-screen flex-col items-center bg-background p-4 sm:p-8">
             <div className="w-full max-w-7xl mx-auto">
                <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
@@ -24,7 +24,10 @@ export default function Home() {
                       </h1>
                   </div>
               </div>
-              <DijkstraVisualizer />
+              <div className="relative">
+                <DijkstraVisualizer />
+                <DijkstraVisualizer.Explanation />
+              </div>
             </div>
           </main>
         </SidebarInset>
