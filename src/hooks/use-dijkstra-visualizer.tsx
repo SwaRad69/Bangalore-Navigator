@@ -7,7 +7,7 @@ import { dijkstra } from '@/lib/dijkstra';
 import { optimizeRouteRendering, type OptimizeRouteRenderingInput } from '@/ai/flows/optimize-route-rendering';
 import { useToast } from "@/hooks/use-toast";
 
-type Status = 'idle' | 'selecting-start' | 'selecting-end' | 'ready' | 'running' | 'paused' | 'finished';
+type Status = 'selecting-start' | 'selecting-end' | 'ready' | 'running' | 'paused' | 'finished';
 
 const parseAIStyle = (styleString: string): AIStyle => {
   const style: AIStyle = { color: '#20B2AA', thickness: 3, glow: false };
@@ -60,7 +60,7 @@ export const DijkstraVisualizerProvider = ({ graph, children }: { graph: Graph, 
 
 
 const useDijkstraVisualizerLogic = (graph: Graph) => {
-  const [status, setStatus] = useState<Status>('idle');
+  const [status, setStatus] = useState<Status>('selecting-start');
   const [startNode, setStartNode] = useState<string | null>(null);
   const [endNode, setEndNode] = useState<string | null>(null);
   const [steps, setSteps] = useState<DijkstraStep[]>([]);
@@ -116,6 +116,8 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   }, [status, startNode, toast]);
 
   const setSelectionMode = useCallback((mode: 'start' | 'end') => {
+    // This function is kept for now in case we want to re-introduce buttons,
+    // but the primary flow is now direct-click.
     if (mode === 'start') {
       setStatus('selecting-start');
       setStartNode(null);
@@ -178,7 +180,7 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   }, [graph, startNode, endNode, toast]);
 
   const reset = useCallback(() => {
-    setStatus('idle');
+    setStatus('selecting-start');
     setStartNode(null);
     setEndNode(null);
     setSteps([]);

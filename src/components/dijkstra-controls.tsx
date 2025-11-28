@@ -4,9 +4,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { useDijkstraVisualizer } from "@/hooks/use-dijkstra-visualizer";
-import { MapPin, Play, Pause, StepForward, StepBack, RotateCcw, LocateFixed, Locate } from "lucide-react";
+import { MapPin, Play, Pause, StepForward, StepBack, RotateCcw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 type DijkstraControlsProps = ReturnType<typeof useDijkstraVisualizer>;
@@ -20,7 +19,6 @@ export function DijkstraControls({
   currentStepIndex,
   steps,
   isPlaying,
-  setSelectionMode,
   run,
   reset,
   stepForward,
@@ -28,12 +26,29 @@ export function DijkstraControls({
   togglePlayPause,
 }: DijkstraControlsProps) {
 
-  const isSelectionActive = status === 'selecting-start' || status === 'selecting-end';
   const isAlgorithmRunning = status === 'running' || status === 'paused';
   const isFinished = status === 'finished';
 
   const progress = steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
   
+  const getStatusDescription = () => {
+    switch (status) {
+      case 'selecting-start':
+        return "Click on the map to choose a start location.";
+      case 'selecting-end':
+        const startNodeName = graph.nodes.find(n => n.id === startNode)?.name || 'start';
+        return `Start point: ${startNodeName}. Now click on the map to choose an end location.`;
+      case 'ready':
+        return "Start and end points selected. Press 'Run' to visualize.";
+      case 'running':
+      case 'paused':
+      case 'finished':
+        return "Algorithm visualization in progress.";
+      default:
+        return "Select a start point to begin.";
+    }
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
@@ -41,42 +56,17 @@ export function DijkstraControls({
           Controls
         </CardTitle>
         <CardDescription>
-          {
-            status === 'idle' ? "Select 'Set Start Point' to begin." :
-            status === 'selecting-start' ? "Click on the map to choose a start location." :
-            status === 'selecting-end' ? "Click on the map to choose an end location." :
-            status === 'ready' ? "Start and end points selected. Press 'Run' to visualize." :
-            (isAlgorithmRunning || isFinished) ? "Algorithm visualization in progress." : ""
-          }
+          {getStatusDescription()}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="flex-grow flex flex-col gap-4">
-        <div className="space-y-3">
-            <Button 
-                onClick={() => setSelectionMode('start')} 
-                variant={status === 'selecting-start' ? "secondary" : "outline"} 
-                className="w-full justify-start gap-2"
-            >
-                <Locate className="w-4 h-4" /> Set Start Point
-            </Button>
-             <Button 
-                onClick={() => setSelectionMode('end')}
-                variant={status === 'selecting-end' ? "secondary" : "outline"} 
-                className="w-full justify-start gap-2"
-                disabled={!startNode}
-            >
-                <LocateFixed className="w-4 h-4" /> Set End Point
-            </Button>
-        </div>
-
         <div className="flex gap-2">
           <Button onClick={run} disabled={status !== 'ready'} className="w-full">
             <Play className="mr-2 h-4 w-4" /> Run Dijkstra
           </Button>
-          <Button onClick={reset} variant="ghost" size="icon">
-            <RotateCcw className="h-4 w-4" />
-            <span className="sr-only">Reset</span>
+          <Button onClick={reset} variant="outline">
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset
           </Button>
         </div>
 
@@ -107,7 +97,7 @@ export function DijkstraControls({
       <CardFooter className="flex-col items-start gap-4 border-t pt-4">
         <h3 className="font-semibold">Current State</h3>
         {currentStep ? (
-            <ScrollArea className="h-36 w-full text-sm">
+            <ScrollArea className="h-48 w-full text-sm">
                 <div className="p-4 rounded-md border bg-muted/50">
                     <p className="font-bold">{currentStep.description}</p>
                 </div>
@@ -118,7 +108,7 @@ export function DijkstraControls({
                 </div>
             </ScrollArea>
         ) : (
-            <div className="flex items-center justify-center w-full h-36 rounded-md border p-4 text-sm text-muted-foreground bg-muted/50">
+            <div className="flex items-center justify-center w-full h-48 rounded-md border p-4 text-sm text-muted-foreground bg-muted/50">
                 <p>Waiting to start algorithm...</p>
             </div>
         )}
