@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -76,20 +77,32 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
           const state = edgeStates[edge.id];
           if (state === 'path') return null; // Path edges are rendered separately
 
+          const midX = (sourceNode.x + targetNode.x) / 2;
+          const midY = (sourceNode.y + targetNode.y) / 2;
+
           return (
-            <line
-              key={edge.id}
-              x1={sourceNode.x}
-              y1={sourceNode.y}
-              x2={targetNode.x}
-              y2={targetNode.y}
-              className={cn(
-                "stroke-muted transition-all duration-300",
-                {
-                  "stroke-[hsl(var(--accent))] stroke-2": state === 'active',
-                }
-              )}
-            />
+            <g key={edge.id}>
+                <line
+                  x1={sourceNode.x}
+                  y1={sourceNode.y}
+                  x2={targetNode.x}
+                  y2={targetNode.y}
+                  className={cn(
+                    "stroke-muted transition-all duration-300",
+                    {
+                      "stroke-[hsl(var(--accent))] stroke-2": state === 'active',
+                    }
+                  )}
+                />
+                 <text
+                    x={midX}
+                    y={midY - 5}
+                    textAnchor="middle"
+                    className="text-[10px] font-mono fill-muted-foreground pointer-events-none"
+                    >
+                    {Math.round(edge.weight)}
+                </text>
+            </g>
           );
         })}
       </g>
@@ -133,7 +146,7 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
                 x={node.x}
                 y={node.y - 18}
                 textAnchor="middle"
-                className="text-xs font-sans fill-foreground pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+                className="text-xs font-sans fill-foreground pointer-events-none"
               >
                 {node.name}
               </text>
