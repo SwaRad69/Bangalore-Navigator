@@ -102,10 +102,31 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     setCurrentStepIndex(0);
     const dijkstraSteps = dijkstra(graph, start, end);
     setSteps(dijkstraSteps);
-    const finalStep = dijkstraSteps[dijkstraSteps.length - 1];
+
+    // Don't set shortest path immediately
+    // const finalStep = dijkstraSteps[dijkstraSteps.length - 1];
+    // const finalPath = finalStep?.path ?? [];
+    // setShortestPath(finalPath);
+
+  }, [graph]);
+
+  useEffect(() => {
+    if (startNode && endNode && status === 'ready') {
+        run(startNode, endNode);
+    }
+  }, [startNode, endNode, run, status]);
+
+
+  const finishAlgorithm = useCallback(async () => {
+    setIsPlaying(false);
+    setStatus('finished');
+    
+    if (steps.length === 0) return;
+
+    const finalStep = steps[steps.length - 1];
     const finalPath = finalStep?.path ?? [];
     setShortestPath(finalPath);
-    
+
     if (finalPath.length > 0) {
       try {
         const input: OptimizeRouteRenderingInput = {
@@ -124,6 +145,7 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
         toast({
           title: "AI Feature Offline",
           description: "Could not generate optimal route style. Using default style.",
+          variant: "default"
         });
       } finally {
         if (!aiStyleRef.current) {
@@ -139,14 +161,8 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
           variant: "destructive",
         });
     }
+  }, [steps, toast]);
 
-  }, [graph, toast]);
-
-  useEffect(() => {
-    if (startNode && endNode && status === 'ready') {
-        run(startNode, endNode);
-    }
-  }, [startNode, endNode, run, status]);
 
   useEffect(() => {
     if (isPlaying && (status === 'running' || status === 'paused')) {
@@ -159,9 +175,8 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
           if (prev < steps.length - 1) {
             return prev + 1;
           } else {
-            setIsPlaying(false);
-            setStatus('finished');
             clearTimer();
+            finishAlgorithm();
             return prev;
           }
         });
@@ -170,7 +185,7 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
       clearTimer();
     }
     return clearTimer;
-  }, [isPlaying, status, steps.length]);
+  }, [isPlaying, status, steps.length, finishAlgorithm]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
     if (status === 'running' || status === 'paused') return;
@@ -197,10 +212,10 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
       const newIndex = currentStepIndex + 1;
       setCurrentStepIndex(newIndex);
       if(newIndex === steps.length - 1) {
-        setStatus('finished');
+        finishAlgorithm();
       }
     }
-  }, [currentStepIndex, steps.length]);
+  }, [currentStepIndex, steps.length, finishAlgorithm]);
 
   const stepBackward = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -303,4 +318,5 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   };
 };
 
+    
     
