@@ -122,7 +122,6 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
         toast({
           title: "AI Feature Offline",
           description: "Could not generate optimal route style. Using default style.",
-          variant: "destructive",
         });
       }
     } else {
