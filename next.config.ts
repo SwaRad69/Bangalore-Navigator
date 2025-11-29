@@ -30,9 +30,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  env: {
-    NEXT_PUBLIC_ENABLE_AI_FEATURE: process.env.NEXT_PUBLIC_ENABLE_AI_FEATURE,
-  },
 };
 
 export default nextConfig;
+
+    

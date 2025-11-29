@@ -29,6 +29,7 @@ const parseAIStyle = (styleString: string): AIStyle => {
     });
   } catch (error) {
     console.error("Failed to parse AI style string:", styleString, error);
+    // Return a default style if parsing fails
     return { color: '#20B2AA', thickness: 4, glow: true };
   }
   return style;
@@ -104,29 +105,25 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     setShortestPath(finalPath);
     
     if (finalPath.length > 0) {
-      if (process.env.NEXT_PUBLIC_ENABLE_AI_FEATURE === 'true') {
-        try {
-          const input: OptimizeRouteRenderingInput = {
-            mapWidth: 800,
-            mapHeight: 900,
-            shortestPath: finalPath.join(' -> '),
-            graphComplexity: 'medium',
-            pointOcclusion: false,
-          };
-          const result = await optimizeRouteRendering(input);
-          const style = parseAIStyle(result.renderingInstructions);
-          setAiStyle(style);
-        } catch (e) {
-          console.error("AI style generation failed:", e);
-          setAiStyle({ color: '#20B2AA', thickness: 4, glow: true });
-          toast({
-            title: "AI Feature Offline",
-            description: "Could not generate optimal route style. Using default style.",
-            variant: "destructive",
-          });
-        }
-      } else {
-         setAiStyle({ color: '#20B2AA', thickness: 4, glow: true });
+      try {
+        const input: OptimizeRouteRenderingInput = {
+          mapWidth: 800,
+          mapHeight: 900,
+          shortestPath: finalPath.join(' -> '),
+          graphComplexity: 'medium',
+          pointOcclusion: false,
+        };
+        const result = await optimizeRouteRendering(input);
+        const style = parseAIStyle(result.renderingInstructions);
+        setAiStyle(style);
+      } catch (e) {
+        console.error("AI style generation failed:", e);
+        setAiStyle({ color: '#20B2AA', thickness: 4, glow: true }); // Fallback style
+        toast({
+          title: "AI Feature Offline",
+          description: "Could not generate optimal route style. Using default style.",
+          variant: "destructive",
+        });
       }
     } else {
         toast({
@@ -139,10 +136,10 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   }, [graph, toast]);
 
   useEffect(() => {
-    if (startNode && endNode) {
+    if (startNode && endNode && status === 'ready') {
         run(startNode, endNode);
     }
-  }, [startNode, endNode, run]);
+  }, [startNode, endNode, run, status]);
 
   useEffect(() => {
     if (isPlaying && (status === 'running' || status === 'paused')) {
@@ -213,6 +210,7 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
       setStatus('paused');
     } else {
       if(currentStepIndex === steps.length -1 && steps.length > 0) {
+        // If at the end, replay from start
         setCurrentStepIndex(0);
       }
       setStatus('running');
@@ -297,3 +295,5 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     togglePlayPause,
   };
 };
+
+    
