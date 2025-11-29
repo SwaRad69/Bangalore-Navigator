@@ -46,9 +46,10 @@ export default function Home() {
     setGridCells(newCells);
     setGridStartCell(null);
     setGridEndCell(null);
-    document.getElementById('grid-meta-size')!.textContent = `Grid: ${rows}x${cols}`;
+    if(document.getElementById('grid-meta-size')) {
+      document.getElementById('grid-meta-size')!.textContent = `Grid: ${rows}x${cols}`;
+    }
   }, [gridIsRunning]);
-
 
   const runGridDijkstra = useCallback(async () => {
       if (!gridStartCell || !gridEndCell || gridIsRunning) return;
@@ -162,7 +163,7 @@ export default function Home() {
     if (gridStartCell && gridEndCell) {
       runGridDijkstra();
     }
-  }, [gridStartCell, gridEndCell, runGridDijkstra]);
+  }, [gridStartCell, gridEndCell]);
 
 
   useEffect(() => {
@@ -871,3 +872,5 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
     </DijkstraVisualizerProvider>
   );
 }
+
+    
