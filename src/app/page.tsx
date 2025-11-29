@@ -170,14 +170,18 @@ export default function Home() {
     const gridWrapper = document.getElementById('grid-wrapper');
 
     const resizeObserver = new ResizeObserver(() => {
-        if (!gridIsRunning) resetGrid();
+        // Only reset if the algorithm is NOT running and there's no path shown.
+        if (!gridIsRunning && !gridStartCell) {
+            resetGrid();
+        }
     });
     if (gridWrapper) resizeObserver.observe(gridWrapper);
 
     return () => {
         if (gridWrapper) resizeObserver.unobserve(gridWrapper);
     }
-  }, [resetGrid, gridIsRunning]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   useEffect(() => {
@@ -518,7 +522,6 @@ export default function Home() {
                     <button 
                         id="toggle-wall-btn" 
                         onClick={() => setGridMode(gridMode === 'wall' ? 'select' : 'wall')}
-                        className={gridMode === 'wall' ? 'active' : ''}
                     >
                         Toggle Wall
                     </button>
@@ -843,7 +846,7 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
             <p className="text-muted">
               A* is like Dijkstra but adds a heuristic <code>h(n)</code> that estimates
               the distance to the goal. When the heuristic is admissible and consistent,
-              A* still guarantees shortest path but explores fewer nodes.
+              A* still guarantees a shortest path but explores fewer nodes.
             </p>
 
             <p><strong>Conclusion:</strong></p>
@@ -868,5 +871,3 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
     </DijkstraVisualizerProvider>
   );
 }
-
-    
