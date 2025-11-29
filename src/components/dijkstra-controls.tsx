@@ -39,11 +39,20 @@ export function DijkstraControls({
       case 'running':
       case 'paused':
       case 'finished':
+         if (isFinished) {
+          return "Algorithm finished. The shortest path is highlighted.";
+        }
         return "Algorithm visualization in progress.";
       default:
         return "Select a start point to begin.";
     }
   };
+  
+  const finalStep = isFinished && steps.length > 0 ? steps[steps.length - 1] : null;
+  const finalDistance = finalStep && endNode ? Math.round(finalStep.distances[endNode]) : null;
+
+  const startNodeName = graph.nodes.find(n => n.id === startNode)?.name;
+  const endNodeName = graph.nodes.find(n => n.id === endNode)?.name;
 
   return (
     <Card className="h-full flex flex-col">
@@ -79,6 +88,21 @@ export function DijkstraControls({
             </div>
           </div>
         )}
+        
+        {isFinished && finalDistance !== null && (
+          <div className="space-y-2 pt-4 border-t">
+            <h3 className="font-semibold">Shortest Path Result</h3>
+            <div className="text-sm text-muted-foreground">
+              <p><span className="font-medium text-foreground">From:</span> {startNodeName}</p>
+              <p><span className="font-medium text-foreground">To:</span> {endNodeName}</p>
+            </div>
+            <div className="pt-2">
+              <p className="text-lg font-bold text-primary">{finalDistance} <span className="text-sm font-medium text-muted-foreground">units</span></p>
+              <p className="text-xs text-muted-foreground">Total distance</p>
+            </div>
+          </div>
+        )}
+        
       </CardContent>
       <CardFooter className="flex-col gap-2 border-t pt-6">
          <Button onClick={reset} variant="outline" className="w-full">
