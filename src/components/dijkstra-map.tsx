@@ -207,14 +207,14 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
                     }
                   )}
                 />
-                 <text
+                 {!isMobile && <text
                     x={midX}
                     y={midY - 5}
                     textAnchor="middle"
                     className="text-[10px] font-mono fill-muted-foreground pointer-events-none"
                     >
                     {Math.round(edge.weight)}
-                </text>
+                </text>}
             </g>
           );
         })}
@@ -260,11 +260,11 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
               />
               <text
                 x={node.x}
-                y={node.y - (isMobile ? 20 : 18)}
+                y={node.y - (isMobile ? 22 : 18)}
                 textAnchor="middle"
                 className={cn(
                   "text-xs font-sans fill-foreground pointer-events-none",
-                  isMobile && "text-[10px]"
+                  isMobile && "text-[14px]"
                 )}
               >
                 {node.name}
@@ -276,7 +276,7 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
                   textAnchor="middle"
                   className={cn(
                     "text-xs font-mono fill-primary pointer-events-none",
-                     isMobile && "text-[10px]"
+                     isMobile && "text-[12px]"
                   )}
                 >
                   {Math.round(distance)}
