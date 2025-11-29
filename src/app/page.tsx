@@ -45,7 +45,7 @@ export default function Home() {
         cell.classList.toggle('wall');
         cell.classList.remove('start', 'end', 'visited', 'path');
       } else { // This block handles start/end cell selection
-        if (cell.classList.contains('wall')) return; // Can't select a wall as start/end
+        if (cell.classList.contains('wall')) return;
         
         if (!startCell) {
             cell.classList.remove('wall', 'visited', 'path', 'end');
@@ -874,3 +874,4 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
   );
 }
 
+    
