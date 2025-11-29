@@ -39,7 +39,20 @@ You must add the following environment variable to your hosting provider's proje
 
 **How to add the key to your hosting provider:**
 
--   **For Vercel**: Go to your project's "Settings" tab, then "Environment Variables", and add `GEMINI_API_KEY` with the value you copied.
--   **For Firebase Hosting**: If you are using a Cloud Run backend with App Hosting, you can set secrets using the Google Cloud Secret Manager and expose them to your application. The name of the secret should be `GEMINI_API_KEY`.
+-   **For Firebase App Hosting (used by Firebase Studio):**
+    1.  Go to the Google Cloud Console for your Firebase project.
+    2.  In the search bar, type "Secret Manager" and select it.
+    3.  Click **"Create Secret"**.
+    4.  For the **Name**, enter `GEMINI_API_KEY`.
+    5.  In the **Secret value** field, paste your copied Gemini API key.
+    6.  Click **"Create secret"**.
+    7. Your App Hosting backend will automatically have access to this secret as an environment variable.
+
+-   **For Vercel**:
+    1. Go to your project's "Settings" tab.
+    2. Go to the "Environment Variables" section.
+    3. Add a new variable with the **Name** `GEMINI_API_KEY` and paste your key as the **Value**.
+    4. Ensure it is available for the "Production" environment.
+    5. Save the changes.
 
 After setting the environment variable, you will need to **re-deploy** your application for the changes to take effect. If you do not set this variable, the AI feature for styling the route will fail, and you will see an "AI Feature Offline" message.
