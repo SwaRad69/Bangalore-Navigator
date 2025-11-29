@@ -74,6 +74,7 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
 
   const { toast } = useToast();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const aiStyleRef = useRef<AIStyle | null>(null);
   
   const clearTimer = () => {
     if (timerRef.current) {
@@ -92,6 +93,7 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     setIsPlaying(false);
     setShortestPath([]);
     setAiStyle(null);
+    aiStyleRef.current = null;
   }, []);
 
   const run = useCallback(async (start: string, end: string) => {
@@ -116,13 +118,19 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
         const result = await optimizeRouteRendering(input);
         const style = parseAIStyle(result.renderingInstructions);
         setAiStyle(style);
+        aiStyleRef.current = style;
       } catch (e) {
         console.error("AI style generation failed:", e);
-        setAiStyle({ color: '#20B2AA', thickness: 4, glow: true }); // Fallback style
         toast({
           title: "AI Feature Offline",
           description: "Could not generate optimal route style. Using default style.",
         });
+      } finally {
+        if (!aiStyleRef.current) {
+            const fallbackStyle = { color: '#20B2AA', thickness: 4, glow: true };
+            setAiStyle(fallbackStyle);
+            aiStyleRef.current = fallbackStyle;
+        }
       }
     } else {
         toast({
