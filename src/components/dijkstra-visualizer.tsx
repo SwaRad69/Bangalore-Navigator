@@ -43,7 +43,7 @@ function Controls() {
 
 function Explanation() {
     const hookData = useDijkstraVisualizer();
-    return <DijkstraExplanation {...hookData} />
+    return <DijkstraExplanation {...hookData} graph={hookData.graph} />
 }
 
 // Attach the Controls component to the main visualizer component

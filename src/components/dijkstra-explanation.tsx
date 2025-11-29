@@ -8,11 +8,19 @@ import type { useDijkstraVisualizer } from "@/hooks/use-dijkstra-visualizer";
 import { Separator } from "@/components/ui/separator";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Graph } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 
-type DijkstraExplanationProps = ReturnType<typeof useDijkstraVisualizer>;
+type DijkstraExplanationProps = ReturnType<typeof useDijkstraVisualizer> & {
+    graph: Graph;
+};
 
-export function DijkstraExplanation({ steps, currentStepIndex }: DijkstraExplanationProps) {
+export function DijkstraExplanation({ steps, currentStepIndex, graph }: DijkstraExplanationProps) {
   const hasSteps = steps.length > 0;
+
+  const getNodeName = (nodeId: string) => {
+    return graph.nodes.find(n => n.id === nodeId)?.name || nodeId;
+  }
 
   return (
     <Sheet>
@@ -48,6 +56,18 @@ export function DijkstraExplanation({ steps, currentStepIndex }: DijkstraExplana
                 <p className="font-bold">{step.description}</p>
                 <Separator className="my-2" />
                 <p className="text-muted-foreground">{step.reasoning}</p>
+                {step.queue && step.queue.length > 0 && (
+                    <div className="mt-3">
+                        <p className="font-semibold text-xs mb-1">Priority Queue:</p>
+                        <div className="flex flex-wrap gap-1">
+                            {step.queue.map(item => (
+                                <Badge variant="secondary" key={item.nodeId} className="font-mono">
+                                    {getNodeName(item.nodeId)}: {item.distance === Infinity ? '∞' : Math.round(item.distance)}
+                                </Badge>
+                            ))}
+                        </div>
+                    </div>
+                )}
               </div>
             ))}
             {steps.length === 0 && (

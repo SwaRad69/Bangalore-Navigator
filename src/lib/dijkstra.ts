@@ -1,3 +1,4 @@
+
 import type { Graph, DijkstraStep } from './types';
 
 class PriorityQueue {
