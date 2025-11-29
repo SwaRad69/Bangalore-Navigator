@@ -12,7 +12,6 @@ type Status = 'selecting-start' | 'selecting-end' | 'ready' | 'running' | 'pause
 const parseAIStyle = (styleString: string): AIStyle => {
   const style: AIStyle = { color: '#20B2AA', thickness: 3, glow: false };
   try {
-    // A more robust parsing logic
     const instructions = styleString.toLowerCase().split('\n').map(s => s.replace(/^-/, '').trim());
     instructions.forEach(instruction => {
       const [key, value] = instruction.split(':').map(s => s.trim());
@@ -30,7 +29,6 @@ const parseAIStyle = (styleString: string): AIStyle => {
     });
   } catch (error) {
     console.error("Failed to parse AI style string:", styleString, error);
-    // Return a default style if parsing fails
     return { color: '#20B2AA', thickness: 4, glow: true };
   }
   return style;
@@ -47,6 +45,7 @@ export const useDijkstraVisualizer = (graph?: Graph) => {
         if (!graph) {
             throw new Error("useDijkstraVisualizer must be used within a DijkstraVisualizerProvider or be provided with a graph");
         }
+        // This path should not be taken if used correctly
         return useDijkstraVisualizerLogic(graph);
     }
     return context;
@@ -74,14 +73,14 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
 
   const { toast } = useToast();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
+  
   const clearTimer = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
   };
-
+  
   const reset = useCallback(() => {
     clearTimer();
     setStatus('selecting-start');
@@ -93,7 +92,7 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     setShortestPath([]);
     setAiStyle(null);
   }, []);
-  
+
   const run = useCallback(async (start: string, end: string) => {
     setStatus('running');
     setIsPlaying(true);
@@ -105,25 +104,29 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     setShortestPath(finalPath);
     
     if (finalPath.length > 0) {
-      try {
-        const input: OptimizeRouteRenderingInput = {
-          mapWidth: 800,
-          mapHeight: 900,
-          shortestPath: finalPath.join(' -> '),
-          graphComplexity: 'medium',
-          pointOcclusion: false,
-        };
-        const result = await optimizeRouteRendering(input);
-        const style = parseAIStyle(result.renderingInstructions);
-        setAiStyle(style);
-      } catch (e) {
-        console.error("AI style generation failed:", e);
-        setAiStyle({ color: '#20B2AA', thickness: 4, glow: true });
-        toast({
-          title: "AI Feature Offline",
-          description: "Could not generate optimal route style. Using default style.",
-          variant: "destructive",
-        });
+      if (process.env.NEXT_PUBLIC_ENABLE_AI_FEATURE === 'true') {
+        try {
+          const input: OptimizeRouteRenderingInput = {
+            mapWidth: 800,
+            mapHeight: 900,
+            shortestPath: finalPath.join(' -> '),
+            graphComplexity: 'medium',
+            pointOcclusion: false,
+          };
+          const result = await optimizeRouteRendering(input);
+          const style = parseAIStyle(result.renderingInstructions);
+          setAiStyle(style);
+        } catch (e) {
+          console.error("AI style generation failed:", e);
+          setAiStyle({ color: '#20B2AA', thickness: 4, glow: true });
+          toast({
+            title: "AI Feature Offline",
+            description: "Could not generate optimal route style. Using default style.",
+            variant: "destructive",
+          });
+        }
+      } else {
+         setAiStyle({ color: '#20B2AA', thickness: 4, glow: true });
       }
     } else {
         toast({
@@ -134,6 +137,12 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     }
 
   }, [graph, toast]);
+
+  useEffect(() => {
+    if (startNode && endNode) {
+        run(startNode, endNode);
+    }
+  }, [startNode, endNode, run]);
 
   useEffect(() => {
     if (isPlaying && (status === 'running' || status === 'paused')) {
@@ -174,11 +183,8 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
       }
       setEndNode(nodeId);
       setStatus('ready');
-      if (startNode) {
-        run(startNode, nodeId);
-      }
     }
-  }, [status, startNode, toast, run, reset]);
+  }, [status, startNode, toast, reset]);
 
   const stepForward = useCallback(() => {
     if (currentStepIndex < steps.length - 1) {
@@ -206,7 +212,6 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     if (isPlaying) {
       setStatus('paused');
     } else {
-      // If paused at the end, restart visualization from beginning
       if(currentStepIndex === steps.length -1 && steps.length > 0) {
         setCurrentStepIndex(0);
       }
@@ -219,18 +224,18 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
   const nodeStates = useMemo(() => {
     const states: Record<string, string> = {};
     
-    if (startNode) states[startNode] = 'start';
-    if (endNode) states[endNode] = 'end';
-
     if (status === 'finished' && shortestPath.length > 0) {
         shortestPath.forEach(id => states[id] = 'path');
-        // Keep start and end distinct
         if (startNode) states[startNode] = 'start';
         if (endNode) states[endNode] = 'end';
         return states;
     }
 
-    if (!currentStep) return states;
+    if (!currentStep) {
+      if (startNode) states[startNode] = 'start';
+      if (endNode) states[endNode] = 'end';
+      return states;
+    };
 
     currentStep.visited.forEach(id => states[id] = 'visited');
     
@@ -241,7 +246,6 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
         states[currentStep.neighbor] = 'neighbor';
     }
 
-    // Always ensure start/end are correctly marked
     if (startNode) states[startNode] = 'start';
     if (endNode) states[endNode] = 'end';
 
@@ -293,5 +297,3 @@ const useDijkstraVisualizerLogic = (graph: Graph) => {
     togglePlayPause,
   };
 };
-
-    
