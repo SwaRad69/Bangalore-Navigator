@@ -9,10 +9,9 @@ import './dijkstra-guide.css';
 
 export default function Home() {
 
-  const [gridMode, setGridMode] = useState('wall');
+  const [gridMode, setGridMode] = useState('select'); // 'select' or 'wall'
 
   useEffect(() => {
-    // Grid Visualizer Script
     const gridWrapper = document.getElementById('grid-wrapper');
     const grid = document.getElementById('grid');
     if (!grid || !gridWrapper) return;
@@ -28,10 +27,10 @@ export default function Home() {
         const toggleBtn = document.getElementById('toggle-wall-btn');
         if (!toggleBtn) return;
         
-        document.querySelectorAll('#controls button.active').forEach(b => b.classList.remove('active'));
-
         if (gridMode === 'wall') {
             toggleBtn.classList.add('active');
+        } else {
+            toggleBtn.classList.remove('active');
         }
     }
     updateToggleButton();
@@ -45,7 +44,8 @@ export default function Home() {
         if (cell.classList.contains('end')) endCell = null;
         cell.classList.toggle('wall');
         cell.classList.remove('start', 'end', 'visited', 'path');
-      } else { // This block handles start/end cell selection, which is now the default flow
+      } else { // This block handles start/end cell selection
+        if (cell.classList.contains('wall')) return; // Can't select a wall as start/end
         
         if (!startCell) {
             cell.classList.remove('wall', 'visited', 'path', 'end');
@@ -874,4 +874,3 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
   );
 }
 
-    
