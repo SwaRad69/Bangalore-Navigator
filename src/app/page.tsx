@@ -4,133 +4,71 @@
 import { DijkstraVisualizer } from '@/components/dijkstra-visualizer';
 import { DijkstraVisualizerProvider } from '@/hooks/use-dijkstra-visualizer';
 import { bengaluruGraph } from '@/lib/graph-data';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import './dijkstra-guide.css';
 
 export default function Home() {
 
   const [gridMode, setGridMode] = useState('select'); // 'select' or 'wall'
+  const [gridCells, setGridCells] = useState<HTMLElement[][]>([]);
+  const [gridIsRunning, setGridIsRunning] = useState(false);
+  const [gridStartCell, setGridStartCell] = useState<HTMLElement | null>(null);
+  const [gridEndCell, setGridEndCell] = useState<HTMLElement | null>(null);
 
-  useEffect(() => {
-    const gridWrapper = document.getElementById('grid-wrapper');
+
+  const resetGrid = useCallback(() => {
+    if(gridIsRunning) return;
     const grid = document.getElementById('grid');
+    const gridWrapper = document.getElementById('grid-wrapper');
     if (!grid || !gridWrapper) return;
 
-    let startCell: HTMLElement | null = null;
-    let endCell: HTMLElement | null = null;
-    let cells: HTMLElement[][] = [];
-    let isRunning = false;
+    const cellWidth = 26; // width + gap
+    const wrapperWidth = gridWrapper.clientWidth;
+    const cols = Math.max(5, Math.floor(wrapperWidth / cellWidth));
+    const rows = 20;
 
-    let size = { rows: 20, cols: 20 };
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    const newCells: HTMLElement[][] = [];
     
-    function updateToggleButton() {
-        const toggleBtn = document.getElementById('toggle-wall-btn');
-        if (!toggleBtn) return;
-        
-        if (gridMode === 'wall') {
-            toggleBtn.classList.add('active');
-        } else {
-            toggleBtn.classList.remove('active');
-        }
-    }
-    updateToggleButton();
-
-
-    function handleCellClick(cell: HTMLElement) {
-      if (isRunning) return;
-
-      if (gridMode === 'wall') {
-        if (cell.classList.contains('start')) startCell = null;
-        if (cell.classList.contains('end')) endCell = null;
-        cell.classList.toggle('wall');
-        cell.classList.remove('start', 'end', 'visited', 'path');
-      } else { // This block handles start/end cell selection
-        if (cell.classList.contains('wall')) return;
-        
-        if (!startCell) {
-            cell.classList.remove('wall', 'visited', 'path', 'end');
-            cell.classList.add('start');
-            startCell = cell;
-        } else if (!endCell && cell !== startCell) {
-            cell.classList.remove('wall', 'visited', 'path', 'start');
-            cell.classList.add('end');
-            endCell = cell;
-            runDijkstra();
-        } else if (cell === startCell) {
-            // User clicked on start cell again, do nothing or allow reset
-        } else if (cell === endCell) {
-            // User clicked on end cell again
-        }
+    for (let r = 0; r < rows; r++) {
+      newCells[r] = [];
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.row = String(r);
+        cell.dataset.col = String(c);
+        grid.appendChild(cell);
+        newCells[r][c] = cell;
       }
     }
     
-    function createGrid() {
-      if (!grid || !gridWrapper) return;
-      
-      const cellWidth = 26; // width + gap
-      const wrapperWidth = gridWrapper.clientWidth;
-      size.cols = Math.max(5, Math.floor(wrapperWidth / cellWidth));
-      
-      grid.innerHTML = '';
-      grid.style.gridTemplateColumns = `repeat(${size.cols}, 1fr)`;
-      cells = [];
-      
-      for (let r = 0; r < size.rows; r++) {
-        cells[r] = [];
-        for (let c = 0; c < size.cols; c++) {
-          const cell = document.createElement('div');
-          cell.classList.add('cell');
-          cell.dataset.row = String(r);
-          cell.dataset.col = String(c);
-          cell.onclick = () => handleCellClick(cell);
-          grid.appendChild(cell);
-          cells[r][c] = cell;
-        }
-      }
-      
-      startCell = null;
-      endCell = null;
-      document.getElementById('grid-meta-size')!.textContent = `Grid: ${size.rows}x${size.cols}`;
-    }
+    setGridCells(newCells);
+    setGridStartCell(null);
+    setGridEndCell(null);
+    document.getElementById('grid-meta-size')!.textContent = `Grid: ${rows}x${cols}`;
+  }, [gridIsRunning]);
 
-    function getNeighbors(r: number, c: number) {
-      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-      const neighbors: [number, number][] = [];
-      for (const [dr, dc] of dirs) {
-        const nr = r + dr, nc = c + dc;
-        if (nr >= 0 && nr < size.rows && nc >= 0 && nc < size.cols) {
-          if (!cells[nr][nc].classList.contains('wall')) {
-            neighbors.push([nr, nc]);
-          }
-        }
-      }
-      return neighbors;
-    }
 
-    async function runDijkstra() {
-      if (!startCell || !endCell) {
-        // This case should not be hit with the new UX flow, but as a safeguard
-        alert("Please select a start and an end cell.");
-        return;
-      }
-      if(isRunning) return;
-      isRunning = true;
-      document.querySelectorAll('#controls button').forEach(b => (b as HTMLButtonElement).disabled = true);
+  const runGridDijkstra = useCallback(async () => {
+      if (!gridStartCell || !gridEndCell || gridIsRunning) return;
 
-      // Clear previous run visualization
-      for (let r = 0; r < size.rows; r++) {
-        for (let c = 0; c < size.cols; c++) {
-          const cell = cells[r][c];
+      setGridIsRunning(true);
+
+      for (let r = 0; r < gridCells.length; r++) {
+        for (let c = 0; c < gridCells[r].length; c++) {
+          const cell = gridCells[r][c];
           if (!cell.classList.contains('start') && !cell.classList.contains('end') && !cell.classList.contains('wall')) {
              cell.classList.remove('visited', 'path');
           }
         }
       }
 
-      const startR = +startCell.dataset.row!;
-      const startC = +startCell.dataset.col!;
-      const endR = +endCell.dataset.row!;
-      const endC = +endCell.dataset.col!;
+      const size = { rows: gridCells.length, cols: gridCells[0].length };
+      const startR = +gridStartCell.dataset.row!;
+      const startC = +gridStartCell.dataset.col!;
+      const endR = +gridEndCell.dataset.row!;
+      const endC = +gridEndCell.dataset.col!;
 
       const dist = Array(size.rows).fill(null).map(() => Array(size.cols).fill(Infinity));
       const prev: ([number, number] | null)[][] = Array(size.rows).fill(null).map(() => Array(size.cols).fill(null));
@@ -138,16 +76,29 @@ export default function Home() {
       dist[startR][startC] = 0;
       const pq: [number, number, number][] = [[0, startR, startC]]; // [distance, r, c]
 
+      const getNeighbors = (r: number, c: number) => {
+        const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const neighbors: [number, number][] = [];
+        for (const [dr, dc] of dirs) {
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < size.rows && nc >= 0 && nc < size.cols) {
+            if (!gridCells[nr][nc].classList.contains('wall')) {
+              neighbors.push([nr, nc]);
+            }
+          }
+        }
+        return neighbors;
+      }
+
       while (pq.length > 0) {
         pq.sort((a, b) => a[0] - b[0]);
         const [d, r, c] = pq.shift()!;
 
         if (d > dist[r][c]) continue;
+        if (r === endR && c === endC) break;
 
-        if (r === endR && c === endC) break; // Found the end
-
-        const cell = cells[r][c];
-        if (cell !== startCell && cell !== endCell) {
+        const cell = gridCells[r][c];
+        if (cell !== gridStartCell && cell !== gridEndCell) {
           cell.classList.add('visited');
           await new Promise(res => setTimeout(res, 10));
         }
@@ -162,53 +113,97 @@ export default function Home() {
         }
       }
 
-      // Reconstruct path
       let cr = endR, cc = endC;
       if (!prev[cr][cc] && !(cr === startR && cc === startC)) {
         alert("No path exists between START and END with the current walls.");
-        isRunning = false;
-        document.querySelectorAll('#controls button').forEach(b => (b as HTMLButtonElement).disabled = false);
+        setGridIsRunning(false);
         return;
       }
 
       while (prev[cr][cc]) {
         const [pr, pc] = prev[cr][cc]!;
-        const cell = cells[pr][pc];
-        if (cell !== startCell) {
+        const cell = gridCells[pr][pc];
+        if (cell !== gridStartCell) {
           cell.classList.add('path');
         }
         cr = pr;
         cc = pc;
         await new Promise(res => setTimeout(res, 20));
       }
-      isRunning = false;
-      document.querySelectorAll('#controls button').forEach(b => (b as HTMLButtonElement).disabled = false);
+      setGridIsRunning(false);
+  }, [gridStartCell, gridEndCell, gridIsRunning, gridCells]);
 
+
+  const handleCellClick = useCallback((cell: HTMLElement) => {
+      if (gridIsRunning) return;
+
+      if (gridMode === 'wall') {
+        if (cell.classList.contains('start')) setGridStartCell(null);
+        if (cell.classList.contains('end')) setGridEndCell(null);
+        cell.classList.toggle('wall');
+        cell.classList.remove('start', 'end', 'visited', 'path');
+      } else {
+        if (cell.classList.contains('wall')) return;
+        
+        if (!gridStartCell) {
+            cell.classList.remove('wall', 'visited', 'path', 'end');
+            cell.classList.add('start');
+            setGridStartCell(cell);
+        } else if (!gridEndCell && cell !== gridStartCell) {
+            cell.classList.remove('wall', 'visited', 'path', 'start');
+            cell.classList.add('end');
+            setGridEndCell(cell);
+        }
+      }
+  }, [gridIsRunning, gridMode, gridStartCell, gridEndCell]);
+
+
+  useEffect(() => {
+    if (gridStartCell && gridEndCell) {
+      runGridDijkstra();
     }
+  }, [gridStartCell, gridEndCell, runGridDijkstra]);
 
-    function resetGrid() {
-        if(isRunning) return;
-        createGrid();
-    }
-    
-    // Initial setup
-    createGrid();
 
-    // Re-create grid on resize
+  useEffect(() => {
+    resetGrid();
+    const gridWrapper = document.getElementById('grid-wrapper');
+
     const resizeObserver = new ResizeObserver(() => {
-        if (!isRunning) createGrid();
+        if (!gridIsRunning) resetGrid();
     });
-    resizeObserver.observe(gridWrapper);
-
-
-    // Attach functions to window for onclick handlers
-    (window as any).resetGrid = resetGrid;
+    if (gridWrapper) resizeObserver.observe(gridWrapper);
 
     return () => {
-        delete (window as any).resetGrid;
-        resizeObserver.disconnect();
+        if (gridWrapper) resizeObserver.unobserve(gridWrapper);
     }
-  }, [gridMode]); // Rerun setup logic when mode changes
+  }, [resetGrid, gridIsRunning]);
+
+
+  useEffect(() => {
+    gridCells.forEach(row => {
+      row.forEach(cell => {
+        cell.onclick = () => handleCellClick(cell);
+      });
+    });
+  }, [gridCells, handleCellClick]);
+
+  useEffect(() => {
+    const toggleBtn = document.getElementById('toggle-wall-btn');
+    if (!toggleBtn) return;
+    
+    if (gridMode === 'wall') {
+        toggleBtn.classList.add('active');
+    } else {
+        toggleBtn.classList.remove('active');
+    }
+
+    const allControls = document.querySelectorAll<HTMLButtonElement>('#controls button');
+    allControls.forEach(b => {
+        b.disabled = gridIsRunning;
+    });
+
+  }, [gridMode, gridIsRunning]);
 
   return (
     <DijkstraVisualizerProvider graph={bengaluruGraph}>
@@ -527,7 +522,7 @@ export default function Home() {
                     >
                         Toggle Wall
                     </button>
-                    <button className="danger" onClick={() => (window as any).resetGrid()}>Reset</button>
+                    <button className="danger" onClick={resetGrid}>Reset</button>
                 </div>
                 
                 <div id="legend">
