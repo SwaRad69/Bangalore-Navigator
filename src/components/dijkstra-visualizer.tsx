@@ -17,8 +17,8 @@ function DijkstraVisualizerWithContext() {
     const hookData = useDijkstraVisualizer();
     return (
          <div className="w-full h-full">
-            <Card className="h-[600px] lg:h-[80vh]">
-                <CardContent className="p-2 h-full">
+            <Card>
+                <CardContent className="p-0 h-full">
                 <DijkstraMap
                     graph={hookData.graph}
                     nodeStates={hookData.nodeStates}
@@ -52,5 +52,3 @@ DijkstraVisualizerContainer.Explanation = Explanation;
 
 // Export the main component with the attached sub-component
 export const DijkstraVisualizer = DijkstraVisualizerContainer;
-
-    

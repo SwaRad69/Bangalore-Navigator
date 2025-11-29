@@ -19,12 +19,12 @@ interface DijkstraMapProps {
 
 const stateColors = {
   default: "hsl(var(--muted-foreground))",
-  start: "hsl(var(--primary))",
-  end: "hsl(var(--destructive))",
+  start: "#22c55e",
+  end: "#f97373",
   visited: "hsl(var(--secondary-foreground) / 0.5)",
   current: "hsl(var(--accent))",
   neighbor: "hsl(var(--accent))",
-  path: "hsl(var(--primary))",
+  path: "#eab308",
 };
 
 const INITIAL_VIEWBOX = { x: 0, y: 0, width: 800, height: 900 };
@@ -254,7 +254,7 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
                 cy={node.y}
                 r={isPathNode || isStartOrEnd || isCurrent ? activeRadius : baseRadius}
                 fill={stateColors[state as keyof typeof stateColors] || stateColors.default}
-                stroke="hsl(var(--card))"
+                stroke="hsl(var(--card-bg))"
                 strokeWidth="2"
                 className="transition-all duration-300"
               />
@@ -289,5 +289,3 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
     </svg>
   );
 }
-
-    
