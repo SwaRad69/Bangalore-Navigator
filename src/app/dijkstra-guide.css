@@ -512,10 +512,17 @@ footer {
     box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.45);
 }
 
-#controls button.primary {
+#controls button.active {
     background: linear-gradient(135deg, var(--accent), var(--accent-strong));
     border-color: transparent;
     box-shadow: 0 14px 30px rgba(79, 70, 229, 0.6);
+}
+
+#controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 #controls button.danger {
@@ -563,20 +570,18 @@ footer {
     border-radius: 14px;
     background: rgba(15, 23, 42, 0.96);
     border: 1px solid rgba(55, 65, 81, 0.95);
-    overflow-x: auto;
+    overflow: hidden;
 }
 
 #grid {
     display: grid;
-    grid-template-columns: repeat(20, 26px);
-    grid-template-rows: repeat(20, 26px);
     gap: 3px;
-    min-width: max-content;
+    min-width: 100%;
 }
 
 .cell {
-    width: 26px;
-    height: 26px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     background: #020617;
     border-radius: 6px;
     border: 1px solid rgba(31, 41, 55, 0.9);

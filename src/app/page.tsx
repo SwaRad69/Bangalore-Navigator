@@ -11,55 +11,81 @@ export default function Home() {
 
   useEffect(() => {
     // Grid Visualizer Script
+    const gridWrapper = document.getElementById('grid-wrapper');
     const grid = document.getElementById('grid');
-    if (!grid) return;
+    if (!grid || !gridWrapper) return;
 
     let mode = 'wall';
-    const size = 20;
     let startCell: HTMLElement | null = null;
     let endCell: HTMLElement | null = null;
-    const cells: HTMLElement[][] = [];
+    let cells: HTMLElement[][] = [];
     let isRunning = false;
 
-    function setMode(m: string) {
+    let size = { rows: 20, cols: 20 };
+
+    function setMode(m: string, btn: HTMLElement) {
       mode = m;
+      document.querySelectorAll('#controls button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
     }
+    
+    function updateControlButtons() {
+        document.getElementById('set-start-btn')?.addEventListener('click', (e) => setMode('start', e.currentTarget as HTMLElement));
+        document.getElementById('set-end-btn')?.addEventListener('click', (e) => setMode('end', e.currentTarget as HTMLElement));
+        document.getElementById('toggle-wall-btn')?.addEventListener('click', (e) => setMode('wall', e.currentTarget as HTMLElement));
+    }
+
 
     function handleCellClick(cell: HTMLElement) {
       if (isRunning) return;
-      const r = cell.dataset.row;
-      const c = cell.dataset.col;
 
-      if (mode === 'start') {
-        if (startCell) startCell.classList.remove('start');
-        if (cell === endCell) endCell = null;
-        cell.classList.remove('end', 'wall', 'visited', 'path');
-        cell.classList.add('start');
-        startCell = cell;
-      } else if (mode === 'end') {
-        if (endCell) endCell.classList.remove('end');
-        if (cell === startCell) startCell = null;
-        cell.classList.remove('start', 'wall', 'visited', 'path');
-        cell.classList.add('end');
-        endCell = cell;
-      } else if (mode === 'wall') {
-        if (cell === startCell) startCell = null;
-        if (cell === endCell) endCell = null;
-        if (cell.classList.contains('wall')) {
-          cell.classList.remove('wall');
-        } else {
-          cell.classList.remove('visited', 'path', 'start', 'end');
-          cell.classList.add('wall');
+      if (mode === 'wall') {
+        if (cell.classList.contains('start')) startCell = null;
+        if (cell.classList.contains('end')) endCell = null;
+        cell.classList.toggle('wall');
+        cell.classList.remove('start', 'end', 'visited', 'path');
+      } else {
+        // If we are setting start or end
+        const isStart = mode === 'start';
+        const currentTarget = isStart ? startCell : endCell;
+        const otherTarget = isStart ? endCell : startCell;
+        const targetClass = isStart ? 'start' : 'end';
+
+        if (currentTarget) {
+          currentTarget.classList.remove(targetClass);
+        }
+        if (cell === otherTarget) {
+          if (isStart) endCell = null;
+          else startCell = null;
+          otherTarget.classList.remove(isStart ? 'end' : 'start');
+        }
+        
+        cell.classList.remove('wall', 'visited', 'path');
+        cell.classList.add(targetClass);
+
+        if (isStart) startCell = cell;
+        else endCell = cell;
+
+        if (startCell && endCell) {
+            runDijkstra();
         }
       }
     }
-
+    
     function createGrid() {
-      if (!grid) return;
+      if (!grid || !gridWrapper) return;
+      
+      const cellWidth = 26; // width + gap
+      const wrapperWidth = gridWrapper.clientWidth;
+      size.cols = Math.floor(wrapperWidth / cellWidth);
+      
       grid.innerHTML = '';
-      for (let r = 0; r < size; r++) {
+      grid.style.gridTemplateColumns = `repeat(${size.cols}, 1fr)`;
+      cells = [];
+      
+      for (let r = 0; r < size.rows; r++) {
         cells[r] = [];
-        for (let c = 0; c < size; c++) {
+        for (let c = 0; c < size.cols; c++) {
           const cell = document.createElement('div');
           cell.classList.add('cell');
           cell.dataset.row = String(r);
@@ -76,7 +102,7 @@ export default function Home() {
       const neighbors: [number, number][] = [];
       for (const [dr, dc] of dirs) {
         const nr = r + dr, nc = c + dc;
-        if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+        if (nr >= 0 && nr < size.rows && nc >= 0 && nc < size.cols) {
           if (!cells[nr][nc].classList.contains('wall')) {
             neighbors.push([nr, nc]);
           }
@@ -87,14 +113,16 @@ export default function Home() {
 
     async function runDijkstra() {
       if (!startCell || !endCell) {
-        alert("Set both START and END cells before running Dijkstra.");
+        alert("Please select a start and an end cell.");
         return;
       }
       if(isRunning) return;
       isRunning = true;
+      document.querySelectorAll('#controls button').forEach(b => (b as HTMLButtonElement).disabled = true);
 
-      for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
+
+      for (let r = 0; r < size.rows; r++) {
+        for (let c = 0; c < size.cols; c++) {
           cells[r][c].classList.remove('visited', 'path');
         }
       }
@@ -104,9 +132,9 @@ export default function Home() {
       const endR = +endCell.dataset.row!;
       const endC = +endCell.dataset.col!;
 
-      const dist = Array(size).fill(null).map(() => Array(size).fill(Infinity));
-      const prev: ([number, number] | null)[][] = Array(size).fill(null).map(() => Array(size).fill(null));
-      const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+      const dist = Array(size.rows).fill(null).map(() => Array(size.cols).fill(Infinity));
+      const prev: ([number, number] | null)[][] = Array(size.rows).fill(null).map(() => Array(size.cols).fill(null));
+      const visited = Array(size.rows).fill(null).map(() => Array(size.cols).fill(false));
 
       dist[startR][startC] = 0;
       const pq: [number, number, number][] = [[0, startR, startC]]; // [distance, r, c]
@@ -119,9 +147,9 @@ export default function Home() {
         visited[r][c] = true;
 
         const cell = cells[r][c];
-        if (!cell.classList.contains('start') && !cell.classList.contains('end')) {
+        if (cell !== startCell && cell !== endCell) {
           cell.classList.add('visited');
-          await new Promise(res => setTimeout(res, 18));
+          await new Promise(res => setTimeout(res, 10));
         }
 
         if (r === endR && c === endC) break;
@@ -140,20 +168,23 @@ export default function Home() {
       if (!prev[cr][cc] && !(cr === startR && cc === startC)) {
         alert("No path exists between START and END with the current walls.");
         isRunning = false;
+        document.querySelectorAll('#controls button').forEach(b => (b as HTMLButtonElement).disabled = false);
         return;
       }
 
       while (prev[cr][cc]) {
         const [pr, pc] = prev[cr][cc]!;
         const cell = cells[pr][pc];
-        if (!cell.classList.contains('start')) {
+        if (cell !== startCell) {
           cell.classList.add('path');
         }
         cr = pr;
         cc = pc;
-        await new Promise(res => setTimeout(res, 25));
+        await new Promise(res => setTimeout(res, 20));
       }
       isRunning = false;
+      document.querySelectorAll('#controls button').forEach(b => (b as HTMLButtonElement).disabled = false);
+
     }
 
     function resetGrid() {
@@ -162,18 +193,30 @@ export default function Home() {
         endCell = null;
         createGrid();
     }
-
+    
+    // Initial setup
     createGrid();
+    updateControlButtons();
+    (document.getElementById('toggle-wall-btn') as HTMLElement).click();
+
+
+    // Re-create grid on resize
+    const resizeObserver = new ResizeObserver(() => {
+        if (!isRunning) createGrid();
+    });
+    resizeObserver.observe(gridWrapper);
+
 
     // Attach functions to window for onclick handlers
-    (window as any).setGridMode = setMode;
     (window as any).runGridDijkstra = runDijkstra;
     (window as any).resetGrid = resetGrid;
+    (window as any).setGridMode = setMode;
 
     return () => {
-        delete (window as any).setGridMode;
         delete (window as any).runGridDijkstra;
         delete (window as any).resetGrid;
+        delete (window as any).setGridMode;
+        resizeObserver.disconnect();
     }
   }, []);
 
@@ -484,20 +527,13 @@ export default function Home() {
                 <p style={{marginTop: 0}}><strong>4.1 Unweighted Grid Visualizer</strong></p>
                 <p className="text-muted" style={{fontSize: '0.9rem'}}>
                     This visualizer shows Dijkstra on a simple grid where every move costs 1.
-                    It is equivalent to a Breadth-First Search (BFS).
+                    Click a cell to set the start, click another to set the end. Click the 'Toggle Wall' button to draw obstacles.
                 </p>
                 <div id="controls">
-                    <button onClick={() => (window as any).setGridMode('start')}>Set Start</button>
-                    <button onClick={() => (window as any).setGridMode('end')}>Set End</button>
-                    <button onClick={() => (window as any).setGridMode('wall')}>Toggle Wall</button>
-                    <button className="primary" onClick={() => (window as any).runGridDijkstra()}>Run Dijkstra</button>
+                    <button id="toggle-wall-btn" onClick={(e) => (window as any).setGridMode('wall', e.currentTarget)}>Toggle Wall</button>
                     <button className="danger" onClick={() => (window as any).resetGrid()}>Reset</button>
                 </div>
-                <p className="hint">
-                    1) Click <strong>Set Start</strong> / <strong>Set End</strong> and then click on a cell.<br />
-                    2) Use <strong>Toggle Wall</strong> to draw obstacles.<br />
-                    3) Press <strong>Run Dijkstra</strong> to animate the search.
-                </p>
+                
                 <div id="legend">
                     <div className="legend-item"><span className="legend-swatch legend-start"></span> Start</div>
                     <div className="legend-item"><span className="legend-swatch legend-end"></span> End</div>
@@ -511,7 +547,7 @@ export default function Home() {
                 </div>
 
                 <div className="meta-row">
-                    <span className="meta-chip">Grid: 20×20</span>
+                    <span id="grid-meta-size" className="meta-chip">Grid: 20×20</span>
                     <span className="meta-chip">Cost: 1 per move (unweighted)</span>
                     <span className="meta-chip">Moves: Up / Down / Left / Right</span>
                 </div>
