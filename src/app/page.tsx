@@ -4,10 +4,179 @@
 import { DijkstraVisualizer } from '@/components/dijkstra-visualizer';
 import { DijkstraVisualizerProvider } from '@/hooks/use-dijkstra-visualizer';
 import { bengaluruGraph } from '@/lib/graph-data';
-import React from 'react';
+import React, { useEffect } from 'react';
 import './dijkstra-guide.css';
 
 export default function Home() {
+
+  useEffect(() => {
+    // Grid Visualizer Script
+    const grid = document.getElementById('grid');
+    if (!grid) return;
+
+    let mode = 'wall';
+    const size = 20;
+    let startCell: HTMLElement | null = null;
+    let endCell: HTMLElement | null = null;
+    const cells: HTMLElement[][] = [];
+    let isRunning = false;
+
+    function setMode(m: string) {
+      mode = m;
+    }
+
+    function handleCellClick(cell: HTMLElement) {
+      if (isRunning) return;
+      const r = cell.dataset.row;
+      const c = cell.dataset.col;
+
+      if (mode === 'start') {
+        if (startCell) startCell.classList.remove('start');
+        if (cell === endCell) endCell = null;
+        cell.classList.remove('end', 'wall', 'visited', 'path');
+        cell.classList.add('start');
+        startCell = cell;
+      } else if (mode === 'end') {
+        if (endCell) endCell.classList.remove('end');
+        if (cell === startCell) startCell = null;
+        cell.classList.remove('start', 'wall', 'visited', 'path');
+        cell.classList.add('end');
+        endCell = cell;
+      } else if (mode === 'wall') {
+        if (cell === startCell) startCell = null;
+        if (cell === endCell) endCell = null;
+        if (cell.classList.contains('wall')) {
+          cell.classList.remove('wall');
+        } else {
+          cell.classList.remove('visited', 'path', 'start', 'end');
+          cell.classList.add('wall');
+        }
+      }
+    }
+
+    function createGrid() {
+      if (!grid) return;
+      grid.innerHTML = '';
+      for (let r = 0; r < size; r++) {
+        cells[r] = [];
+        for (let c = 0; c < size; c++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = String(r);
+          cell.dataset.col = String(c);
+          cell.onclick = () => handleCellClick(cell);
+          grid.appendChild(cell);
+          cells[r][c] = cell;
+        }
+      }
+    }
+
+    function getNeighbors(r: number, c: number) {
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      const neighbors: [number, number][] = [];
+      for (const [dr, dc] of dirs) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+          if (!cells[nr][nc].classList.contains('wall')) {
+            neighbors.push([nr, nc]);
+          }
+        }
+      }
+      return neighbors;
+    }
+
+    async function runDijkstra() {
+      if (!startCell || !endCell) {
+        alert("Set both START and END cells before running Dijkstra.");
+        return;
+      }
+      if(isRunning) return;
+      isRunning = true;
+
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          cells[r][c].classList.remove('visited', 'path');
+        }
+      }
+
+      const startR = +startCell.dataset.row!;
+      const startC = +startCell.dataset.col!;
+      const endR = +endCell.dataset.row!;
+      const endC = +endCell.dataset.col!;
+
+      const dist = Array(size).fill(null).map(() => Array(size).fill(Infinity));
+      const prev: ([number, number] | null)[][] = Array(size).fill(null).map(() => Array(size).fill(null));
+      const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+
+      dist[startR][startC] = 0;
+      const pq: [number, number, number][] = [[0, startR, startC]]; // [distance, r, c]
+
+      while (pq.length > 0) {
+        pq.sort((a, b) => a[0] - b[0]);
+        const [d, r, c] = pq.shift()!;
+
+        if (visited[r][c]) continue;
+        visited[r][c] = true;
+
+        const cell = cells[r][c];
+        if (!cell.classList.contains('start') && !cell.classList.contains('end')) {
+          cell.classList.add('visited');
+          await new Promise(res => setTimeout(res, 18));
+        }
+
+        if (r === endR && c === endC) break;
+
+        for (const [nr, nc] of getNeighbors(r, c)) {
+          const nd = d + 1;
+          if (nd < dist[nr][nc]) {
+            dist[nr][nc] = nd;
+            prev[nr][nc] = [r, c];
+            pq.push([nd, nr, nc]);
+          }
+        }
+      }
+
+      let cr = endR, cc = endC;
+      if (!prev[cr][cc] && !(cr === startR && cc === startC)) {
+        alert("No path exists between START and END with the current walls.");
+        isRunning = false;
+        return;
+      }
+
+      while (prev[cr][cc]) {
+        const [pr, pc] = prev[cr][cc]!;
+        const cell = cells[pr][pc];
+        if (!cell.classList.contains('start')) {
+          cell.classList.add('path');
+        }
+        cr = pr;
+        cc = pc;
+        await new Promise(res => setTimeout(res, 25));
+      }
+      isRunning = false;
+    }
+
+    function resetGrid() {
+        if(isRunning) return;
+        startCell = null;
+        endCell = null;
+        createGrid();
+    }
+
+    createGrid();
+
+    // Attach functions to window for onclick handlers
+    (window as any).setGridMode = setMode;
+    (window as any).runGridDijkstra = runDijkstra;
+    (window as any).resetGrid = resetGrid;
+
+    return () => {
+        delete (window as any).setGridMode;
+        delete (window as any).runGridDijkstra;
+        delete (window as any).resetGrid;
+    }
+  }, []);
+
   return (
     <DijkstraVisualizerProvider graph={bengaluruGraph}>
       {/* NAVBAR */}
@@ -40,7 +209,7 @@ export default function Home() {
             <h1>Dijkstra’s Algorithm<br />Complete Guide & Visualizer</h1>
             <p>
               Learn how Dijkstra’s Algorithm finds the shortest path in weighted graphs,
-              see the step-by-step logic, and explore an interactive map visualizer of Bengaluru –
+              see the step-by-step logic, and explore interactive visualizers –
               all in one website.
             </p>
             <div className="hero-badges">
@@ -267,7 +436,7 @@ export default function Home() {
             <div className="card">
               <p><strong>3.2 Pseudocode</strong></p>
               <pre>
-DIJKSTRA(G, source):{`
+{`DIJKSTRA(G, source):
     for each vertex v in G:
         dist[v] = ∞
         prev[v] = NULL
@@ -305,11 +474,57 @@ DIJKSTRA(G, source):{`
           <div className="section-header">
             <div className="section-title">
               <span className="dot"></span>
-              <span>4. Interactive Bengaluru Visualizer</span>
+              <span>4. Interactive Visualizers</span>
             </div>
-            <span className="section-kicker">Watch Dijkstra explore the map</span>
+            <span className="section-kicker">Watch Dijkstra explore the grid and the map</span>
           </div>
-          <div className="visualizer-container">
+        
+          {/* GRID VISUALIZER */}
+           <div className="card" style={{marginBottom: '2rem'}}>
+                <p style={{marginTop: 0}}><strong>4.1 Unweighted Grid Visualizer</strong></p>
+                <p className="text-muted" style={{fontSize: '0.9rem'}}>
+                    This visualizer shows Dijkstra on a simple grid where every move costs 1.
+                    It is equivalent to a Breadth-First Search (BFS).
+                </p>
+                <div id="controls">
+                    <button onClick={() => (window as any).setGridMode('start')}>Set Start</button>
+                    <button onClick={() => (window as any).setGridMode('end')}>Set End</button>
+                    <button onClick={() => (window as any).setGridMode('wall')}>Toggle Wall</button>
+                    <button className="primary" onClick={() => (window as any).runGridDijkstra()}>Run Dijkstra</button>
+                    <button className="danger" onClick={() => (window as any).resetGrid()}>Reset</button>
+                </div>
+                <p className="hint">
+                    1) Click <strong>Set Start</strong> / <strong>Set End</strong> and then click on a cell.<br />
+                    2) Use <strong>Toggle Wall</strong> to draw obstacles.<br />
+                    3) Press <strong>Run Dijkstra</strong> to animate the search.
+                </p>
+                <div id="legend">
+                    <div className="legend-item"><span className="legend-swatch legend-start"></span> Start</div>
+                    <div className="legend-item"><span className="legend-swatch legend-end"></span> End</div>
+                    <div className="legend-item"><span className="legend-swatch legend-wall"></span> Wall</div>
+                    <div className="legend-item"><span className="legend-swatch legend-visited"></span> Visited</div>
+                    <div className="legend-item"><span className="legend-swatch legend-path"></span> Shortest Path</div>
+                </div>
+
+                <div id="grid-wrapper">
+                    <div id="grid"></div>
+                </div>
+
+                <div className="meta-row">
+                    <span className="meta-chip">Grid: 20×20</span>
+                    <span className="meta-chip">Cost: 1 per move (unweighted)</span>
+                    <span className="meta-chip">Moves: Up / Down / Left / Right</span>
+                </div>
+            </div>
+
+          {/* MAP VISUALIZER */}
+          <div className="card">
+            <p style={{marginTop: 0}}><strong>4.2 Bengaluru Map Visualizer (Weighted Graph)</strong></p>
+            <p className="text-muted" style={{fontSize: '0.9rem'}}>
+                This visualizer runs Dijkstra on a weighted graph representing key locations in Bengaluru.
+                The distance between locations is the weight of the edge.
+            </p>
+             <div className="visualizer-container">
               <div className="controls-column">
                   <DijkstraVisualizer.Controls />
               </div>
@@ -318,6 +533,8 @@ DIJKSTRA(G, source):{`
                   <DijkstraVisualizer.Explanation />
               </div>
           </div>
+          </div>
+         
         </section>
 
         {/* APPLICATIONS */}
@@ -612,7 +829,7 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
             </p>
           </div>
         </section>
-
+        
         <footer>
             <span>
                 Built as a complete Dijkstra learning page – theory, visualizer,
@@ -624,5 +841,3 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
     </DijkstraVisualizerProvider>
   );
 }
-
-    

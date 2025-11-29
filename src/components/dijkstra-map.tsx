@@ -119,6 +119,10 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
   const handleMouseUp = () => setIsPanning(false);
 
   const handleWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) {
+        // If Ctrl/Cmd key is not pressed, don't zoom, let the page scroll
+        return;
+    }
     e.preventDefault();
     const point = getPoint(e);
     const scale = e.deltaY < 0 ? 0.9 : 1.1;
@@ -286,6 +290,9 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
           );
         })}
       </g>
+      <text x={viewBox.x + 15} y={viewBox.y + viewBox.height - 15} className="text-[12px] fill-muted-foreground pointer-events-none">
+        Use Ctrl/Cmd + Scroll to zoom
+      </text>
     </svg>
   );
 }
