@@ -49,7 +49,19 @@ const optimizeRouteRenderingFlow = ai.defineFlow(
     outputSchema: OptimizeRouteRenderingOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      return output!;
+    } catch (error) {
+      console.error("AI flow failed, returning default style:", error);
+      // Fallback to a default style if the AI call fails. This prevents server crashes.
+      return {
+        renderingInstructions: `
+- Color: #20B2AA (Light Sea Green)
+- Line thickness: 4 pixels
+- Special effects: glow
+        `,
+      };
+    }
   }
 );
