@@ -561,7 +561,7 @@ footer {
 
 .legend-start { background: #22c55e; }
 .legend-end { background: #f97373; }
-.legend-wall { background: hsl(var(--background)); }
+.legend-wall { background: hsl(215 25% 65.1%); }
 .legend-visited { background: #0ea5e9; }
 .legend-path { background: #eab308; }
 
@@ -597,7 +597,7 @@ footer {
 
 .cell.start { background: #22c55e !important; border-color: #22c55e !important;}
 .cell.end { background: #f97373 !important; border-color: #f97373 !important; }
-.cell.wall { background: hsl(var(--background)) !important; border-color: hsl(var(--border)) !important; }
+.cell.wall { background: hsl(215 25% 65.1%) !important; border-color: hsl(215 25% 75.1%) !important; }
 .cell.visited { background: #0ea5e9 !important; border-color: #0ea5e9 !important;}
 .cell.path { background: #eab308 !important; border-color: #eab308 !important;}
 
