@@ -4,10 +4,12 @@
 import { DijkstraVisualizer } from '@/components/dijkstra-visualizer';
 import { DijkstraVisualizerProvider } from '@/hooks/use-dijkstra-visualizer';
 import { bengaluruGraph } from '@/lib/graph-data';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './dijkstra-guide.css';
 
 export default function Home() {
+
+  const [gridMode, setGridMode] = useState('wall');
 
   useEffect(() => {
     // Grid Visualizer Script
@@ -15,59 +17,49 @@ export default function Home() {
     const grid = document.getElementById('grid');
     if (!grid || !gridWrapper) return;
 
-    let mode = 'wall';
     let startCell: HTMLElement | null = null;
     let endCell: HTMLElement | null = null;
     let cells: HTMLElement[][] = [];
     let isRunning = false;
 
     let size = { rows: 20, cols: 20 };
-
-    function setMode(m: string, btn: HTMLElement) {
-      mode = m;
-      document.querySelectorAll('#controls button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    }
     
-    function updateControlButtons() {
-        document.getElementById('set-start-btn')?.addEventListener('click', (e) => setMode('start', e.currentTarget as HTMLElement));
-        document.getElementById('set-end-btn')?.addEventListener('click', (e) => setMode('end', e.currentTarget as HTMLElement));
-        document.getElementById('toggle-wall-btn')?.addEventListener('click', (e) => setMode('wall', e.currentTarget as HTMLElement));
+    function updateToggleButton() {
+        const toggleBtn = document.getElementById('toggle-wall-btn');
+        if (!toggleBtn) return;
+        
+        document.querySelectorAll('#controls button.active').forEach(b => b.classList.remove('active'));
+
+        if (gridMode === 'wall') {
+            toggleBtn.classList.add('active');
+        }
     }
+    updateToggleButton();
 
 
     function handleCellClick(cell: HTMLElement) {
       if (isRunning) return;
 
-      if (mode === 'wall') {
+      if (gridMode === 'wall') {
         if (cell.classList.contains('start')) startCell = null;
         if (cell.classList.contains('end')) endCell = null;
         cell.classList.toggle('wall');
         cell.classList.remove('start', 'end', 'visited', 'path');
-      } else {
-        // If we are setting start or end
-        const isStart = mode === 'start';
-        const currentTarget = isStart ? startCell : endCell;
-        const otherTarget = isStart ? endCell : startCell;
-        const targetClass = isStart ? 'start' : 'end';
-
-        if (currentTarget) {
-          currentTarget.classList.remove(targetClass);
-        }
-        if (cell === otherTarget) {
-          if (isStart) endCell = null;
-          else startCell = null;
-          otherTarget.classList.remove(isStart ? 'end' : 'start');
-        }
+      } else { // This block handles start/end cell selection, which is now the default flow
         
-        cell.classList.remove('wall', 'visited', 'path');
-        cell.classList.add(targetClass);
-
-        if (isStart) startCell = cell;
-        else endCell = cell;
-
-        if (startCell && endCell) {
+        if (!startCell) {
+            cell.classList.remove('wall', 'visited', 'path', 'end');
+            cell.classList.add('start');
+            startCell = cell;
+        } else if (!endCell && cell !== startCell) {
+            cell.classList.remove('wall', 'visited', 'path', 'start');
+            cell.classList.add('end');
+            endCell = cell;
             runDijkstra();
+        } else if (cell === startCell) {
+            // User clicked on start cell again, do nothing or allow reset
+        } else if (cell === endCell) {
+            // User clicked on end cell again
         }
       }
     }
@@ -77,7 +69,7 @@ export default function Home() {
       
       const cellWidth = 26; // width + gap
       const wrapperWidth = gridWrapper.clientWidth;
-      size.cols = Math.floor(wrapperWidth / cellWidth);
+      size.cols = Math.max(5, Math.floor(wrapperWidth / cellWidth));
       
       grid.innerHTML = '';
       grid.style.gridTemplateColumns = `repeat(${size.cols}, 1fr)`;
@@ -95,6 +87,10 @@ export default function Home() {
           cells[r][c] = cell;
         }
       }
+      
+      startCell = null;
+      endCell = null;
+      document.getElementById('grid-meta-size')!.textContent = `Grid: ${size.rows}x${size.cols}`;
     }
 
     function getNeighbors(r: number, c: number) {
@@ -113,6 +109,7 @@ export default function Home() {
 
     async function runDijkstra() {
       if (!startCell || !endCell) {
+        // This case should not be hit with the new UX flow, but as a safeguard
         alert("Please select a start and an end cell.");
         return;
       }
@@ -120,10 +117,13 @@ export default function Home() {
       isRunning = true;
       document.querySelectorAll('#controls button').forEach(b => (b as HTMLButtonElement).disabled = true);
 
-
+      // Clear previous run visualization
       for (let r = 0; r < size.rows; r++) {
         for (let c = 0; c < size.cols; c++) {
-          cells[r][c].classList.remove('visited', 'path');
+          const cell = cells[r][c];
+          if (!cell.classList.contains('start') && !cell.classList.contains('end') && !cell.classList.contains('wall')) {
+             cell.classList.remove('visited', 'path');
+          }
         }
       }
 
@@ -134,8 +134,7 @@ export default function Home() {
 
       const dist = Array(size.rows).fill(null).map(() => Array(size.cols).fill(Infinity));
       const prev: ([number, number] | null)[][] = Array(size.rows).fill(null).map(() => Array(size.cols).fill(null));
-      const visited = Array(size.rows).fill(null).map(() => Array(size.cols).fill(false));
-
+      
       dist[startR][startC] = 0;
       const pq: [number, number, number][] = [[0, startR, startC]]; // [distance, r, c]
 
@@ -143,16 +142,15 @@ export default function Home() {
         pq.sort((a, b) => a[0] - b[0]);
         const [d, r, c] = pq.shift()!;
 
-        if (visited[r][c]) continue;
-        visited[r][c] = true;
+        if (d > dist[r][c]) continue;
+
+        if (r === endR && c === endC) break; // Found the end
 
         const cell = cells[r][c];
         if (cell !== startCell && cell !== endCell) {
           cell.classList.add('visited');
           await new Promise(res => setTimeout(res, 10));
         }
-
-        if (r === endR && c === endC) break;
 
         for (const [nr, nc] of getNeighbors(r, c)) {
           const nd = d + 1;
@@ -164,6 +162,7 @@ export default function Home() {
         }
       }
 
+      // Reconstruct path
       let cr = endR, cc = endC;
       if (!prev[cr][cc] && !(cr === startR && cc === startC)) {
         alert("No path exists between START and END with the current walls.");
@@ -189,16 +188,11 @@ export default function Home() {
 
     function resetGrid() {
         if(isRunning) return;
-        startCell = null;
-        endCell = null;
         createGrid();
     }
     
     // Initial setup
     createGrid();
-    updateControlButtons();
-    (document.getElementById('toggle-wall-btn') as HTMLElement).click();
-
 
     // Re-create grid on resize
     const resizeObserver = new ResizeObserver(() => {
@@ -208,17 +202,13 @@ export default function Home() {
 
 
     // Attach functions to window for onclick handlers
-    (window as any).runGridDijkstra = runDijkstra;
     (window as any).resetGrid = resetGrid;
-    (window as any).setGridMode = setMode;
 
     return () => {
-        delete (window as any).runGridDijkstra;
         delete (window as any).resetGrid;
-        delete (window as any).setGridMode;
         resizeObserver.disconnect();
     }
-  }, []);
+  }, [gridMode]); // Rerun setup logic when mode changes
 
   return (
     <DijkstraVisualizerProvider graph={bengaluruGraph}>
@@ -527,10 +517,16 @@ export default function Home() {
                 <p style={{marginTop: 0}}><strong>4.1 Unweighted Grid Visualizer</strong></p>
                 <p className="text-muted" style={{fontSize: '0.9rem'}}>
                     This visualizer shows Dijkstra on a simple grid where every move costs 1.
-                    Click a cell to set the start, click another to set the end. Click the 'Toggle Wall' button to draw obstacles.
+                    Click a cell to set the start, click another to set the end and start the algorithm. Click the 'Toggle Wall' button to draw obstacles.
                 </p>
                 <div id="controls">
-                    <button id="toggle-wall-btn" onClick={(e) => (window as any).setGridMode('wall', e.currentTarget)}>Toggle Wall</button>
+                    <button 
+                        id="toggle-wall-btn" 
+                        onClick={() => setGridMode(gridMode === 'wall' ? 'select' : 'wall')}
+                        className={gridMode === 'wall' ? 'active' : ''}
+                    >
+                        Toggle Wall
+                    </button>
                     <button className="danger" onClick={() => (window as any).resetGrid()}>Reset</button>
                 </div>
                 
@@ -877,3 +873,5 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
     </DijkstraVisualizerProvider>
   );
 }
+
+    
