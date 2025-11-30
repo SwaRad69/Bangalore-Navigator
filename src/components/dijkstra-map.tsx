@@ -22,8 +22,8 @@ const stateColors = {
   start: "#22c55e",
   end: "#f97373",
   visited: "hsl(var(--secondary-foreground) / 0.5)",
-  current: "hsl(var(--accent))",
-  neighbor: "hsl(var(--accent))",
+  current: "hsl(var(--primary))",
+  neighbor: "hsl(var(--primary))",
   path: "#eab308",
 };
 
@@ -207,7 +207,7 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
                   className={cn(
                     "stroke-muted transition-all duration-300",
                     {
-                      "stroke-[hsl(var(--accent))] stroke-2": state === 'active',
+                      "stroke-[#38bdf8] stroke-2": state === 'active',
                     }
                   )}
                 />
@@ -279,7 +279,7 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
                   y={node.y + (isMobile ? 28 : 24)}
                   textAnchor="middle"
                   className={cn(
-                    "text-xs font-mono fill-primary pointer-events-none",
+                    "text-xs font-mono fill-[#38bdf8] pointer-events-none",
                      isMobile && "text-[12px]"
                   )}
                 >

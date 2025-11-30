@@ -97,8 +97,8 @@ export function DijkstraControls({
               <p><span className="font-medium text-foreground">To:</span> {endNodeName}</p>
             </div>
             <div className="pt-2">
-              <p className="text-lg font-bold text-primary">{finalDistance} <span className="text-sm font-medium text-muted-foreground">units</span></p>
-              <p className="text-xs text-muted-foreground">Total distance</p>
+              <p className="text-lg font-bold text-primary">{finalDistance} <span className="text-sm font-medium text-muted-foreground">km</span></p>
+              <p className="text-xs text-muted-foreground">Approx. distance</p>
             </div>
           </div>
         )}
