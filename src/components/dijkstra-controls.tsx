@@ -57,7 +57,7 @@ export function DijkstraControls({
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader>
+      <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center gap-2">
           Controls
         </CardTitle>
@@ -66,7 +66,7 @@ export function DijkstraControls({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-grow flex flex-col gap-4 overflow-hidden">
+      <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full pr-6">
           <div className="flex flex-col gap-4">
             {(isAlgorithmRunning || isFinished) && (
@@ -108,7 +108,7 @@ export function DijkstraControls({
           </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="flex-col gap-2 border-t pt-6">
+      <CardFooter className="flex-col gap-2 border-t pt-6 flex-shrink-0">
          <Button onClick={reset} variant="outline" className="w-full">
             <RotateCcw className="mr-2 h-4 w-4" /> Reset
           </Button>
