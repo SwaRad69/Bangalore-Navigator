@@ -9,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const OptimizeRouteRenderingInputSchema = z.object({
   mapWidth: z.number().describe('The width of the map in pixels.'),
@@ -51,7 +51,10 @@ const optimizeRouteRenderingFlow = ai.defineFlow(
   async input => {
     try {
       const {output} = await prompt(input);
-      return output!;
+      if (!output) {
+         throw new Error("AI output was empty.");
+      }
+      return output;
     } catch (error) {
       console.error("AI flow failed, returning default style:", error);
       // Fallback to a default style if the AI call fails. This prevents server crashes.
