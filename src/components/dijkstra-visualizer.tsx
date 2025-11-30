@@ -6,6 +6,7 @@ import { DijkstraMap } from '@/components/dijkstra-map';
 import { DijkstraControls } from '@/components/dijkstra-controls';
 import { DijkstraExplanation } from '@/components/dijkstra-explanation';
 import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
 
 function DijkstraVisualizerContainer() {
     return (
@@ -41,9 +42,14 @@ function Controls() {
     return <DijkstraControls {...hookData} />
 }
 
-function Explanation() {
+type ExplanationProps = {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+function Explanation({ open, onOpenChange }: ExplanationProps) {
     const hookData = useDijkstraVisualizer();
-    return <DijkstraExplanation {...hookData} graph={hookData.graph} />
+    return <DijkstraExplanation {...hookData} graph={hookData.graph} open={open} onOpenChange={onOpenChange} />
 }
 
 // Attach the Controls component to the main visualizer component

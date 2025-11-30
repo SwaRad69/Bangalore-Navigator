@@ -13,9 +13,11 @@ import { Badge } from "@/components/ui/badge";
 
 type DijkstraExplanationProps = ReturnType<typeof useDijkstraVisualizer> & {
     graph: Graph;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
 };
 
-export function DijkstraExplanation({ steps, currentStepIndex, graph }: DijkstraExplanationProps) {
+export function DijkstraExplanation({ steps, currentStepIndex, graph, open, onOpenChange }: DijkstraExplanationProps) {
   const hasSteps = steps.length > 0;
 
   const getNodeName = (nodeId: string) => {
@@ -23,7 +25,7 @@ export function DijkstraExplanation({ steps, currentStepIndex, graph }: Dijkstra
   }
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         <Button 
           variant="outline" 
@@ -34,14 +36,14 @@ export function DijkstraExplanation({ steps, currentStepIndex, graph }: Dijkstra
           Explanation
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-md p-0">
-        <SheetHeader className="p-6 pb-0">
+      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col sheet-in-layout">
+        <SheetHeader className="p-6 pb-0 flex-shrink-0">
           <SheetTitle>Algorithm Explanation</SheetTitle>
           <SheetDescription>
             A step-by-step breakdown of Dijkstra's algorithm in action.
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="h-full">
+        <ScrollArea className="flex-grow">
           <div className="flex flex-col gap-2 p-6">
             {steps.map((step, index) => (
               <div 

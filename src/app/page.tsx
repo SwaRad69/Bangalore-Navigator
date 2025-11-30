@@ -14,42 +14,61 @@ export default function Home() {
   const [gridIsRunning, setGridIsRunning] = useState(false);
   const [gridStartCell, setGridStartCell] = useState<HTMLElement | null>(null);
   const [gridEndCell, setGridEndCell] = useState<HTMLElement | null>(null);
+  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
 
-  const resetGrid = useCallback(() => {
-    if(gridIsRunning) return;
-    const grid = document.getElementById('grid');
-    const gridWrapper = document.getElementById('grid-wrapper');
-    if (!grid || !gridWrapper) return;
+  const resetGrid = useCallback((force = false) => {
+    if(gridIsRunning && !force) return;
 
-    const cellWidth = 26; // width + gap
-    const wrapperWidth = gridWrapper.clientWidth;
-    const cols = Math.max(5, Math.floor(wrapperWidth / cellWidth));
-    const rows = 20;
-
-    grid.innerHTML = '';
-    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    const newCells: HTMLElement[][] = [];
-    
-    for (let r = 0; r < rows; r++) {
-      newCells[r] = [];
-      for (let c = 0; c < cols; c++) {
-        const cell = document.createElement('div');
-        cell.classList.add('cell');
-        cell.dataset.row = String(r);
-        cell.dataset.col = String(c);
-        grid.appendChild(cell);
-        newCells[r][c] = cell;
-      }
-    }
-    
-    setGridCells(newCells);
+    setGridIsRunning(true);
     setGridStartCell(null);
     setGridEndCell(null);
-    if(document.getElementById('grid-meta-size')) {
-      document.getElementById('grid-meta-size')!.textContent = `Grid: ${rows}x${cols}`;
+
+    gridCells.forEach(row => {
+        row.forEach(cell => {
+            cell.classList.remove('start', 'end', 'wall', 'visited', 'path');
+        });
+    });
+
+    const grid = document.getElementById('grid');
+    const gridWrapper = document.getElementById('grid-wrapper');
+    if (!grid || !gridWrapper) {
+        setGridIsRunning(false);
+        return;
     }
-  }, [gridIsRunning]);
+
+    const isResettingAll = !gridStartCell && !gridEndCell && gridCells.length > 0;
+    if(isResettingAll || force) {
+        const cellWidth = 26;
+        const wrapperWidth = gridWrapper.clientWidth;
+        const cols = Math.max(5, Math.floor(wrapperWidth / cellWidth));
+        const rows = 20;
+
+        grid.innerHTML = '';
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        const newCells: HTMLElement[][] = [];
+        
+        for (let r = 0; r < rows; r++) {
+        newCells[r] = [];
+        for (let c = 0; c < cols; c++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.row = String(r);
+            cell.dataset.col = String(c);
+            grid.appendChild(cell);
+            newCells[r][c] = cell;
+        }
+        }
+        
+        setGridCells(newCells);
+        if(document.getElementById('grid-meta-size')) {
+          document.getElementById('grid-meta-size')!.textContent = `Grid: ${rows}x${cols}`;
+        }
+    }
+    setGridIsRunning(false);
+
+  }, [gridIsRunning, gridCells, gridStartCell, gridEndCell]);
+
 
   const runGridDijkstra = useCallback(async () => {
       if (!gridStartCell || !gridEndCell || gridIsRunning) return;
@@ -139,10 +158,8 @@ export default function Home() {
       if (gridIsRunning) return;
 
       if (gridMode === 'wall') {
-        if (cell.classList.contains('start')) setGridStartCell(null);
-        if (cell.classList.contains('end')) setGridEndCell(null);
+        if (cell.classList.contains('start') || cell.classList.contains('end')) return;
         cell.classList.toggle('wall');
-        cell.classList.remove('start', 'end', 'visited', 'path');
       } else {
         if (cell.classList.contains('wall')) return;
         
@@ -163,15 +180,15 @@ export default function Home() {
     if (gridStartCell && gridEndCell) {
       runGridDijkstra();
     }
-  }, [gridStartCell, gridEndCell]);
+  }, [gridStartCell, gridEndCell, runGridDijkstra]);
 
 
   useEffect(() => {
-    resetGrid();
+    resetGrid(true); // force full reset on first load
     const gridWrapper = document.getElementById('grid-wrapper');
 
     const resizeObserver = new ResizeObserver(() => {
-        resetGrid();
+        resetGrid(true); // force full reset on resize
     });
     if (gridWrapper) resizeObserver.observe(gridWrapper);
 
@@ -363,8 +380,7 @@ export default function Home() {
                   results.
                 </p>
 
-                <p><strong>2.2 Key Ideas</strong></p>
-                <ul>
+                <p><strong>2.2 Key Ideas</strong></p><ul>
                   <li>
                     Maintain an array <code>dist[v]</code>: best known distance from source
                     to node <code>v</code>.
@@ -523,7 +539,7 @@ export default function Home() {
                     >
                         Toggle Wall
                     </button>
-                    <button className="danger" onClick={resetGrid}>Reset</button>
+                    <button className="danger" onClick={() => resetGrid(true)}>Reset</button>
                 </div>
                 
                 <div id="legend">
@@ -552,17 +568,22 @@ export default function Home() {
                 This visualizer runs Dijkstra on a weighted graph representing key locations in Bengaluru.
                 The distance between locations is the weight of the edge.
             </p>
-             <div className="visualizer-container">
-              <div className="controls-column">
-                  <div>
-                    <DijkstraVisualizer.Controls />
-                  </div>
-              </div>
-              <div className="map-column">
-                  <DijkstraVisualizer />
-                  <DijkstraVisualizer.Explanation />
-              </div>
-          </div>
+             <div className="visualizer-wrapper" data-explanation-open={isExplanationOpen}>
+                <div className="visualizer-container">
+                    <div className="controls-column">
+                        <div>
+                            <DijkstraVisualizer.Controls />
+                        </div>
+                    </div>
+                    <div className="map-column">
+                        <DijkstraVisualizer />
+                        <DijkstraVisualizer.Explanation 
+                            open={isExplanationOpen} 
+                            onOpenChange={setIsExplanationOpen}
+                        />
+                    </div>
+                </div>
+            </div>
           </div>
          
         </section>
