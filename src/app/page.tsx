@@ -17,6 +17,28 @@ export default function Home() {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
 
+  const handleCellClick = useCallback((cell: HTMLElement) => {
+      if (gridIsRunning) return;
+
+      if (gridMode === 'wall') {
+        if (cell.classList.contains('start') || cell.classList.contains('end')) return;
+        cell.classList.toggle('wall');
+      } else {
+        if (cell.classList.contains('wall')) return;
+        
+        if (!gridStartCell) {
+            cell.classList.remove('wall', 'visited', 'path', 'end');
+            cell.classList.add('start');
+            setGridStartCell(cell);
+        } else if (!gridEndCell && cell !== gridStartCell) {
+            cell.classList.remove('wall', 'visited', 'path', 'start');
+            cell.classList.add('end');
+            setGridEndCell(cell);
+        }
+      }
+  }, [gridIsRunning, gridMode, gridStartCell, gridEndCell]);
+
+
   const resetGrid = useCallback((force = false) => {
     if(gridIsRunning && !force) return;
 
@@ -154,47 +176,17 @@ export default function Home() {
   }, [gridStartCell, gridEndCell, gridIsRunning, gridCells]);
 
 
-  const handleCellClick = useCallback((cell: HTMLElement) => {
-      if (gridIsRunning) return;
-
-      if (gridMode === 'wall') {
-        if (cell.classList.contains('start') || cell.classList.contains('end')) return;
-        cell.classList.toggle('wall');
-      } else {
-        if (cell.classList.contains('wall')) return;
-        
-        if (!gridStartCell) {
-            cell.classList.remove('wall', 'visited', 'path', 'end');
-            cell.classList.add('start');
-            setGridStartCell(cell);
-        } else if (!gridEndCell && cell !== gridStartCell) {
-            cell.classList.remove('wall', 'visited', 'path', 'start');
-            cell.classList.add('end');
-            setGridEndCell(cell);
-        }
-      }
-  }, [gridIsRunning, gridMode, gridStartCell, gridEndCell]);
-
-
   useEffect(() => {
     if (gridStartCell && gridEndCell) {
       runGridDijkstra();
     }
-  }, [gridStartCell, gridEndCell, runGridDijkstra]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gridStartCell, gridEndCell]);
 
 
   useEffect(() => {
     resetGrid(true); // force full reset on first load
-    const gridWrapper = document.getElementById('grid-wrapper');
-
-    const resizeObserver = new ResizeObserver(() => {
-        resetGrid(true); // force full reset on resize
-    });
-    if (gridWrapper) resizeObserver.observe(gridWrapper);
-
-    return () => {
-        if (gridWrapper) resizeObserver.unobserve(gridWrapper);
-    }
+    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -571,17 +563,15 @@ export default function Home() {
              <div className="visualizer-wrapper" data-explanation-open={isExplanationOpen}>
                 <div className="visualizer-container">
                     <div className="controls-column">
-                        <div>
-                            <DijkstraVisualizer.Controls />
-                        </div>
+                       <DijkstraVisualizer.Controls />
                     </div>
                     <div className="map-column">
                         <DijkstraVisualizer />
-                        <DijkstraVisualizer.Explanation 
-                            open={isExplanationOpen} 
-                            onOpenChange={setIsExplanationOpen}
-                        />
                     </div>
+                     <DijkstraVisualizer.Explanation 
+                        open={isExplanationOpen} 
+                        onOpenChange={setIsExplanationOpen}
+                    />
                 </div>
             </div>
           </div>
@@ -892,3 +882,5 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
     </DijkstraVisualizerProvider>
   );
 }
+
+    
