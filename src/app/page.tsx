@@ -171,10 +171,7 @@ export default function Home() {
     const gridWrapper = document.getElementById('grid-wrapper');
 
     const resizeObserver = new ResizeObserver(() => {
-        // Only reset if the algorithm is NOT running and there's no path shown.
-        if (!gridIsRunning && !gridStartCell) {
-            resetGrid();
-        }
+        resetGrid();
     });
     if (gridWrapper) resizeObserver.observe(gridWrapper);
 
@@ -557,7 +554,9 @@ export default function Home() {
             </p>
              <div className="visualizer-container">
               <div className="controls-column">
-                  <DijkstraVisualizer.Controls />
+                  <div>
+                    <DijkstraVisualizer.Controls />
+                  </div>
               </div>
               <div className="map-column">
                   <DijkstraVisualizer />
@@ -872,5 +871,3 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
     </DijkstraVisualizerProvider>
   );
 }
-
-    

@@ -616,4 +616,13 @@ footer {
     background: rgba(15, 23, 42, 0.96);
     border: 1px dashed rgba(75, 85, 99, 1);
 }
+
+@media (max-width: 1024px) {
+    .visualizer-container {
+        grid-template-columns: 1fr;
+    }
+    .controls-column {
+        position: static;
+    }
+}
     
