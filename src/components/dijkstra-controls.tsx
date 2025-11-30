@@ -3,6 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { useDijkstraVisualizer } from "@/hooks/use-dijkstra-visualizer";
 import { Play, Pause, StepForward, StepBack, RotateCcw } from "lucide-react";
 
@@ -65,44 +66,47 @@ export function DijkstraControls({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-grow flex flex-col gap-4">
-        {(isAlgorithmRunning || isFinished) && (
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-semibold">Visualization</h3>
-            <div className="flex justify-center items-center gap-2">
-              <Button onClick={stepBackward} variant="outline" size="icon" disabled={currentStepIndex === 0}>
-                <StepBack className="h-4 w-4" />
-              </Button>
-              <Button onClick={togglePlayPause} variant="outline" size="icon" className="w-16 h-16 rounded-full text-primary border-primary border-2 hover:bg-primary/10" disabled={isFinished}>
-                {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
-              </Button>
-              <Button onClick={stepForward} variant="outline" size="icon" disabled={currentStepIndex >= steps.length - 1}>
-                <StepForward className="h-4 w-4" />
-              </Button>
-            </div>
-             <div className="relative w-full h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                    className="absolute top-0 left-0 h-full bg-primary transition-all duration-500" 
-                    style={{ width: `${progress}%` }}
-                />
-            </div>
+      <CardContent className="flex-grow flex flex-col gap-4 overflow-hidden">
+        <ScrollArea className="h-full pr-6">
+          <div className="flex flex-col gap-4">
+            {(isAlgorithmRunning || isFinished) && (
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="font-semibold">Visualization</h3>
+                <div className="flex justify-center items-center gap-2">
+                  <Button onClick={stepBackward} variant="outline" size="icon" disabled={currentStepIndex === 0}>
+                    <StepBack className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={togglePlayPause} variant="outline" size="icon" className="w-16 h-16 rounded-full text-primary border-primary border-2 hover:bg-primary/10" disabled={isFinished}>
+                    {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
+                  </Button>
+                  <Button onClick={stepForward} variant="outline" size="icon" disabled={currentStepIndex >= steps.length - 1}>
+                    <StepForward className="h-4 w-4" />
+                  </Button>
+                </div>
+                 <div className="relative w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                        className="absolute top-0 left-0 h-full bg-primary transition-all duration-500" 
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+              </div>
+            )}
+            
+            {isFinished && finalDistance !== null && (
+              <div className="space-y-2 pt-4 border-t">
+                <h3 className="font-semibold">Shortest Path Result</h3>
+                <div className="text-sm text-muted-foreground">
+                  <p><span className="font-medium text-foreground">From:</span> {startNodeName}</p>
+                  <p><span className="font-medium text-foreground">To:</span> {endNodeName}</p>
+                </div>
+                <div className="pt-2">
+                  <p className="text-lg font-bold text-primary">{finalDistance} <span className="text-sm font-medium text-muted-foreground">km</span></p>
+                  <p className="text-xs text-muted-foreground">Approx. distance</p>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-        
-        {isFinished && finalDistance !== null && (
-          <div className="space-y-2 pt-4 border-t">
-            <h3 className="font-semibold">Shortest Path Result</h3>
-            <div className="text-sm text-muted-foreground">
-              <p><span className="font-medium text-foreground">From:</span> {startNodeName}</p>
-              <p><span className="font-medium text-foreground">To:</span> {endNodeName}</p>
-            </div>
-            <div className="pt-2">
-              <p className="text-lg font-bold text-primary">{finalDistance} <span className="text-sm font-medium text-muted-foreground">km</span></p>
-              <p className="text-xs text-muted-foreground">Approx. distance</p>
-            </div>
-          </div>
-        )}
-        
+        </ScrollArea>
       </CardContent>
       <CardFooter className="flex-col gap-2 border-t pt-6">
          <Button onClick={reset} variant="outline" className="w-full">
