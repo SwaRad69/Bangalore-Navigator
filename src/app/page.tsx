@@ -1,51 +1,95 @@
 
 "use client";
 
+// Import React hooks for state management and side effects.
 import { DijkstraVisualizer } from '@/components/dijkstra-visualizer';
 import { DijkstraVisualizerProvider } from '@/hooks/use-dijkstra-visualizer';
 import { bengaluruGraph } from '@/lib/graph-data';
 import React, { useEffect, useState, useCallback } from 'react';
+
+// Import the custom CSS for this page.
 import './dijkstra-guide.css';
 
+/**
+ * The main component for the application's homepage.
+ * It serves as a comprehensive guide to Dijkstra's algorithm,
+ * featuring both a text-based explanation and two interactive visualizers.
+ */
 export default function Home() {
+  // === STATE MANAGEMENT for the Grid Visualizer ===
 
+  // `gridMode` determines what happens when a user clicks a cell.
+  // 'select': The user is picking a start or end point.
+  // 'wall': The user is drawing obstacles (walls).
   const [gridMode, setGridMode] = useState('select'); // 'select' or 'wall'
+
+  // `gridCells` holds a 2D array of the actual HTML elements that make up the grid.
+  // This allows us to directly manipulate their styles (e.g., change colors).
   const [gridCells, setGridCells] = useState<HTMLElement[][]>([]);
+
+  // `gridIsRunning` is a flag to prevent user interaction (like clicking cells)
+  // while the Dijkstra animation is playing.
   const [gridIsRunning, setGridIsRunning] = useState(false);
+
+  // `gridStartCell` and `gridEndCell` store references to the chosen start and end cells.
   const [gridStartCell, setGridStartCell] = useState<HTMLElement | null>(null);
   const [gridEndCell, setGridEndCell] = useState<HTMLElement | null>(null);
+
+  // `isExplanationOpen` controls the visibility of the explanation panel for the map visualizer.
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
 
+  // === FUNCTIONS for the Grid Visualizer ===
+
+  /**
+   * Handles clicks on individual cells in the grid.
+   * `useCallback` is a React Hook that memoizes the function, meaning it isn't
+   * recreated on every render. This is important for performance and preventing
+   * bugs related to stale state in event handlers.
+   */
   const handleCellClick = useCallback((cell: HTMLElement) => {
+      // If the algorithm animation is running, ignore all clicks.
       if (gridIsRunning) return;
 
+      // If the mode is 'wall', toggle the 'wall' class on the clicked cell.
       if (gridMode === 'wall') {
+        // Don't allow walls to be placed on the start or end cells.
         if (cell.classList.contains('start') || cell.classList.contains('end')) return;
         cell.classList.toggle('wall');
-      } else {
+      } else { // If the mode is 'select'
+        // Don't allow start/end points to be placed on walls.
         if (cell.classList.contains('wall')) return;
         
+        // If no start cell has been chosen yet...
         if (!gridStartCell) {
+            // Clear any previous styling and mark this cell as the start.
             cell.classList.remove('wall', 'visited', 'path', 'end');
             cell.classList.add('start');
             setGridStartCell(cell);
         } else if (!gridEndCell && cell !== gridStartCell) {
+            // If we have a start cell but no end cell, and the clicked cell is different...
+            // Mark this cell as the end.
             cell.classList.remove('wall', 'visited', 'path', 'start');
             cell.classList.add('end');
             setGridEndCell(cell);
         }
       }
-  }, [gridIsRunning, gridMode, gridStartCell, gridEndCell]);
+  }, [gridIsRunning, gridMode, gridStartCell, gridEndCell]); // Dependencies: the function will be re-memoized if any of these values change.
 
 
+  /**
+   * Resets the grid to its initial state.
+   * `useCallback` is used here for the same performance reasons as above.
+   */
   const resetGrid = useCallback((force = false) => {
+    // Don't reset if the animation is running unless forced.
     if(gridIsRunning && !force) return;
 
-    setGridIsRunning(true);
+    setGridIsRunning(true); // Disable controls during reset
     setGridStartCell(null);
     setGridEndCell(null);
 
+    // Clear all visual styles from the cells.
     gridCells.forEach(row => {
         row.forEach(cell => {
             cell.classList.remove('start', 'end', 'wall', 'visited', 'path');
@@ -59,44 +103,54 @@ export default function Home() {
         return;
     }
 
+    // `force` is true on the initial page load or when the user clicks "Reset".
+    // This part rebuilds the entire grid structure based on the container's width.
     const isResettingAll = !gridStartCell && !gridEndCell && gridCells.length > 0;
     if(isResettingAll || force) {
-        const cellWidth = 26;
+        const cellWidth = 26; // The width of each cell in pixels.
         const wrapperWidth = gridWrapper.clientWidth;
         const cols = Math.max(5, Math.floor(wrapperWidth / cellWidth));
         const rows = 20;
 
-        grid.innerHTML = '';
+        grid.innerHTML = ''; // Clear the old grid DOM.
         grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         const newCells: HTMLElement[][] = [];
         
+        // Create new cell elements and add them to the DOM and our state.
         for (let r = 0; r < rows; r++) {
-        newCells[r] = [];
-        for (let c = 0; c < cols; c++) {
-            const cell = document.createElement('div');
-            cell.classList.add('cell');
-            cell.dataset.row = String(r);
-            cell.dataset.col = String(c);
-            grid.appendChild(cell);
-            newCells[r][c] = cell;
-        }
+            newCells[r] = [];
+            for (let c = 0; c < cols; c++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.row = String(r);
+                cell.dataset.col = String(c);
+                grid.appendChild(cell);
+                newCells[r][c] = cell;
+            }
         }
         
-        setGridCells(newCells);
-        if(document.getElementById('grid-meta-size')) {
-          document.getElementById('grid-meta-size')!.textContent = `Grid: ${rows}x${cols}`;
+        setGridCells(newCells); // Store the new grid structure in state.
+        const metaSizeEl = document.getElementById('grid-meta-size');
+        if(metaSizeEl) {
+          metaSizeEl.textContent = `Grid: ${rows}x${cols}`;
         }
     }
-    setGridIsRunning(false);
+    setGridIsRunning(false); // Re-enable controls.
 
   }, [gridIsRunning, gridCells, gridStartCell, gridEndCell]);
 
 
+  /**
+   * Runs the Dijkstra algorithm on the grid.
+   * `useCallback` prevents this complex function from being recreated on every render.
+   */
   const runGridDijkstra = useCallback(async () => {
+      // Don't run if we don't have both start and end points, or if it's already running.
       if (!gridStartCell || !gridEndCell || gridIsRunning) return;
 
       setGridIsRunning(true);
 
+      // Clear previous 'visited' and 'path' styles before starting a new run.
       for (let r = 0; r < gridCells.length; r++) {
         for (let c = 0; c < gridCells[r].length; c++) {
           const cell = gridCells[r][c];
@@ -107,23 +161,31 @@ export default function Home() {
       }
 
       const size = { rows: gridCells.length, cols: gridCells[0].length };
+      // Get the row and column from the cell's `data-` attributes.
       const startR = +gridStartCell.dataset.row!;
       const startC = +gridStartCell.dataset.col!;
       const endR = +gridEndCell.dataset.row!;
       const endC = +gridEndCell.dataset.col!;
 
+      // --- Core Dijkstra's Algorithm Logic for the Grid ---
+      // `dist` stores the shortest distance from the start node to every other node.
       const dist = Array(size.rows).fill(null).map(() => Array(size.cols).fill(Infinity));
+      // `prev` stores the predecessor of each node in the shortest path.
       const prev: ([number, number] | null)[][] = Array(size.rows).fill(null).map(() => Array(size.cols).fill(null));
       
-      dist[startR][startC] = 0;
-      const pq: [number, number, number][] = [[0, startR, startC]]; // [distance, r, c]
+      dist[startR][startC] = 0; // Distance to the start node is 0.
+      // A simple priority queue: array of [distance, row, col].
+      const pq: [number, number, number][] = [[0, startR, startC]];
 
+      // Helper function to get valid neighbors (up, down, left, right) of a cell.
       const getNeighbors = (r: number, c: number) => {
         const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
         const neighbors: [number, number][] = [];
         for (const [dr, dc] of dirs) {
           const nr = r + dr, nc = c + dc;
+          // Check if the neighbor is within the grid bounds.
           if (nr >= 0 && nr < size.rows && nc >= 0 && nc < size.cols) {
+            // Check if the neighbor is not a wall.
             if (!gridCells[nr][nc].classList.contains('wall')) {
               neighbors.push([nr, nc]);
             }
@@ -132,91 +194,136 @@ export default function Home() {
         return neighbors;
       }
 
+      // Main algorithm loop
       while (pq.length > 0) {
-        pq.sort((a, b) => a[0] - b[0]);
-        const [d, r, c] = pq.shift()!;
+        pq.sort((a, b) => a[0] - b[0]); // Keep the queue sorted by distance.
+        const [d, r, c] = pq.shift()!; // Get the node with the smallest distance.
 
-        if (d > dist[r][c]) continue;
-        if (r === endR && c === endC) break;
+        if (d > dist[r][c]) continue; // Skip if we've already found a shorter path.
+        if (r === endR && c === endC) break; // Stop if we've reached the end.
 
         const cell = gridCells[r][c];
         if (cell !== gridStartCell && cell !== gridEndCell) {
-          cell.classList.add('visited');
-          await new Promise(res => setTimeout(res, 10));
+          cell.classList.add('visited'); // Mark the cell as visited for visualization.
+          await new Promise(res => setTimeout(res, 10)); // Pause for animation effect.
         }
 
+        // For each neighbor, check if we can find a shorter path.
         for (const [nr, nc] of getNeighbors(r, c)) {
-          const nd = d + 1;
-          if (nd < dist[nr][nc]) {
-            dist[nr][nc] = nd;
-            prev[nr][nc] = [r, c];
-            pq.push([nd, nr, nc]);
+          const newDist = d + 1; // In an unweighted grid, each step costs 1.
+          if (newDist < dist[nr][nc]) {
+            dist[nr][nc] = newDist;
+            prev[nr][nc] = [r, c]; // Record the path.
+            pq.push([newDist, nr, nc]); // Add the neighbor to the queue.
           }
         }
       }
-
+      
+      // --- Path Reconstruction ---
       let cr = endR, cc = endC;
       if (!prev[cr][cc] && !(cr === startR && cc === startC)) {
         alert("No path exists between START and END with the current walls.");
         setGridIsRunning(false);
         return;
       }
-
+      // Work backwards from the end node to the start node.
       while (prev[cr][cc]) {
         const [pr, pc] = prev[cr][cc]!;
         const cell = gridCells[pr][pc];
         if (cell !== gridStartCell) {
-          cell.classList.add('path');
+          cell.classList.add('path'); // Add the 'path' class for visualization.
         }
         cr = pr;
         cc = pc;
-        await new Promise(res => setTimeout(res, 20));
+        await new Promise(res => setTimeout(res, 20)); // Pause for animation effect.
       }
-      setGridIsRunning(false);
+      setGridIsRunning(false); // Algorithm finished.
   }, [gridStartCell, gridEndCell, gridIsRunning, gridCells]);
 
 
+  // === useEffect HOOKS for managing side effects ===
+
+  /**
+   * `useEffect` is a React Hook that lets you synchronize a component with an external system.
+   * This effect runs the Dijkstra algorithm automatically whenever the start or end cell changes.
+   */
   useEffect(() => {
+    // If both start and end cells are selected, run the algorithm.
     if (gridStartCell && gridEndCell) {
       runGridDijkstra();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // The dependency array `[gridStartCell, gridEndCell]` means this effect will only
+    // re-run if `gridStartCell` or `gridEndCell` changes.
+    // We intentionally leave `runGridDijkstra` out to avoid an infinite loop.
   }, [gridStartCell, gridEndCell]);
 
 
+  /**
+   * This effect runs only once when the component first mounts, indicated by the empty
+   * dependency array `[]`. It's used for one-time setup.
+   */
   useEffect(() => {
-    resetGrid(true); // force full reset on first load
+    // Build the initial grid structure on page load.
+    resetGrid(true); // `true` forces a full rebuild of the grid.
     
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // The `ResizeObserver` watches for changes in the grid wrapper's size.
+    // If the window is resized, it rebuilds the grid to be responsive.
+    const gridWrapper = document.getElementById('grid-wrapper');
+    if (gridWrapper) {
+      const resizeObserver = new ResizeObserver(() => {
+        resetGrid(true);
+      });
+      resizeObserver.observe(gridWrapper);
+
+      // The return function from useEffect is a cleanup function.
+      // It runs when the component unmounts to prevent memory leaks.
+      return () => resizeObserver.disconnect();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array means this runs only once.
 
 
+  /**
+   * This effect is responsible for attaching the `onclick` event handlers to the grid cells.
+   * It needs to re-run whenever the grid is rebuilt (`gridCells` changes) or when the
+   * `handleCellClick` function is updated (e.g., when `gridMode` changes).
+   */
   useEffect(() => {
     gridCells.forEach(row => {
       row.forEach(cell => {
+        // Assign our memoized `handleCellClick` function to each cell's onclick event.
         cell.onclick = () => handleCellClick(cell);
       });
     });
-  }, [gridCells, handleCellClick]);
+  }, [gridCells, handleCellClick]); // Re-run if the cells or the click handler change.
 
+  /**
+   * This effect synchronizes the UI of the control buttons with the current state.
+   */
   useEffect(() => {
     const toggleBtn = document.getElementById('toggle-wall-btn');
     if (!toggleBtn) return;
     
+    // Add or remove the 'active' class on the "Toggle Wall" button based on `gridMode`.
     if (gridMode === 'wall') {
         toggleBtn.classList.add('active');
     } else {
         toggleBtn.classList.remove('active');
     }
 
+    // Disable all control buttons if the algorithm animation is running.
     const allControls = document.querySelectorAll<HTMLButtonElement>('#controls button');
     allControls.forEach(b => {
         b.disabled = gridIsRunning;
     });
 
-  }, [gridMode, gridIsRunning]);
+  }, [gridMode, gridIsRunning]); // Re-run if mode or running status changes.
 
+  // The JSX returned here is what gets rendered to the screen.
+  // It's a combination of static HTML structure and dynamic components.
   return (
+    // The `DijkstraVisualizerProvider` provides all the state and logic for the
+    // map visualizer to all its children components.
     <DijkstraVisualizerProvider graph={bengaluruGraph}>
       {/* NAVBAR */}
       <nav className="navbar">
@@ -229,6 +336,7 @@ export default function Home() {
             </div>
           </div>
           <div className="nav-links">
+            {/* These are anchor links that allow smooth scrolling to different sections. */}
             <a href="#intro">Intro</a>
             <a href="#theory">Theory</a>
             <a href="#algo">Steps</a>
@@ -242,7 +350,7 @@ export default function Home() {
       </nav>
 
       <main className="page-shell">
-        {/* HERO */}
+        {/* HERO SECTION */}
         <section className="hero" id="top">
           <div className="hero-text">
             <h1>Dijkstra’s Algorithm<br />Complete Guide & Visualizer</h1>
@@ -299,7 +407,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* INTRODUCTION */}
+        {/* INTRODUCTION SECTION */}
         <section className="section" id="intro">
           <div className="section-header">
             <div className="section-title">
@@ -348,7 +456,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* THEORY */}
+        {/* THEORY SECTION */}
         <section className="section" id="theory">
             <div className="section-header">
                 <div className="section-title">
@@ -421,7 +529,7 @@ export default function Home() {
             </div>
         </section>
 
-        {/* ALGORITHM STEPS & PSEUDOCODE */}
+        {/* ALGORITHM STEPS & PSEUDOCODE SECTION */}
         <section className="section" id="algo">
           <div className="section-header">
             <div className="section-title">
@@ -507,7 +615,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* VISUALIZER */}
+        {/* VISUALIZER SECTION */}
         <section className="section" id="visualizer">
           <div className="section-header">
             <div className="section-title">
@@ -525,6 +633,7 @@ export default function Home() {
                     Click a cell to set the start, click another to set the end and start the algorithm. Click the 'Toggle Wall' button to draw obstacles.
                 </p>
                 <div id="controls">
+                    {/* The `onClick` handlers call the state update functions defined at the top. */}
                     <button 
                         id="toggle-wall-btn" 
                         onClick={() => setGridMode(gridMode === 'wall' ? 'select' : 'wall')}
@@ -535,6 +644,7 @@ export default function Home() {
                 </div>
                 
                 <div id="legend">
+                    {/* A simple legend to explain the colors used in the grid. */}
                     <div className="legend-item"><span className="legend-swatch legend-start"></span> Start</div>
                     <div className="legend-item"><span className="legend-swatch legend-end"></span> End</div>
                     <div className="legend-item"><span className="legend-swatch legend-wall"></span> Wall</div>
@@ -543,6 +653,7 @@ export default function Home() {
                 </div>
 
                 <div id="grid-wrapper">
+                    {/* This div is the container for the grid cells, which are generated dynamically in `resetGrid`. */}
                     <div id="grid"></div>
                 </div>
 
@@ -560,14 +671,27 @@ export default function Home() {
                 This visualizer runs Dijkstra on a weighted graph representing key locations in Bengaluru.
                 The distance between locations is the weight of the edge.
             </p>
+             {/* 
+                This wrapper `div` helps manage the layout when the explanation panel is open.
+                The `data-explanation-open` attribute is used by the CSS to adjust the grid layout.
+             */}
              <div className="visualizer-wrapper" data-explanation-open={isExplanationOpen}>
                 <div className="visualizer-container">
                     <div className="controls-column">
+                       {/* 
+                         This component contains all the controls for the map visualizer (play, pause, reset).
+                         It gets all its logic and data from the `DijkstraVisualizerProvider` context.
+                       */}
                        <DijkstraVisualizer.Controls />
                     </div>
                     <div className="map-column">
+                        {/* This is the main map display component. */}
                         <DijkstraVisualizer />
                     </div>
+                     {/* 
+                        This component is the slide-out panel that shows the step-by-step explanation.
+                        Its visibility is controlled by the `isExplanationOpen` state.
+                     */}
                      <DijkstraVisualizer.Explanation 
                         open={isExplanationOpen} 
                         onOpenChange={setIsExplanationOpen}
@@ -578,7 +702,7 @@ export default function Home() {
          
         </section>
 
-        {/* APPLICATIONS */}
+        {/* APPLICATIONS SECTION */}
         <section className="section" id="applications">
           <div className="section-header">
             <div className="section-title">
@@ -630,7 +754,7 @@ export default function Home() {
           </div>
         </section>
         
-        {/* COMPARISON */}
+        {/* COMPARISON SECTION */}
         <section className="section" id="comparison">
             <div className="section-header">
                 <div className="section-title"><span className="dot"></span><span>6. Comparison with Other Algorithms</span></div>
@@ -699,7 +823,7 @@ export default function Home() {
             </div>
         </section>
 
-        {/* IMPLEMENTATION */}
+        {/* IMPLEMENTATION SECTION */}
         <section className="section" id="implementation">
           <div className="section-header">
             <div className="section-title">
@@ -783,7 +907,7 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
           </div>
         </section>
 
-        {/* DOCUMENTATION / SRS STYLE */}
+        {/* DOCUMENTATION SECTION */}
         <section className="section" id="documentation">
           <div className="section-header">
             <div className="section-title">
@@ -823,14 +947,14 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
               <ul>
                 <li>User enters graph and source node.</li>
                 <li>System runs Dijkstra and computes shortest paths.</li>
-<li>System displays distances and path sequences.</li>
+                <li>System displays distances and path sequences.</li>
                 <li>Optional: visualize the search process (as in this website).</li>
               </ul>
             </div>
           </div>
         </section>
         
-        {/* FAQ / CONCLUSION */}
+        {/* FAQ & CONCLUSION SECTION */}
         <section className="section" id="faq">
           <div className="section-header">
             <div className="section-title">
@@ -871,6 +995,7 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
           </div>
         </section>
         
+        {/* FOOTER */}
         <footer>
             <span>
                 Built as a complete Dijkstra learning page – theory, visualizer,
@@ -882,5 +1007,3 @@ void dijkstra(int n, vector<vector<pair<int,int>>> &graph, int source) {
     </DijkstraVisualizerProvider>
   );
 }
-
-    
