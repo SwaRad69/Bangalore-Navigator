@@ -140,7 +140,12 @@ export function DijkstraMap({ graph, nodeStates, edgeStates, onNodeClick, aiStyl
   };
 
   const handleTouchStart = (e: React.TouchEvent) => handleMouseDown(e);
-  const handleTouchMove = (e: React.TouchEvent) => handleMouseMove(e);
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault(); // This prevents the page from scrolling
+    handleMouseMove(e);
+  };
+
   const handleTouchEnd = () => handleMouseUp();
 
 
