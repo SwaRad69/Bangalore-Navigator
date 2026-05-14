@@ -1,3 +1,8 @@
+the deployment got ggz
+never bohtered to fix it 
+it was good trust me bro
+
+
 # Bengaluru Navigator
 
 This is a Next.js application that visualizes Dijkstra's shortest-path algorithm on a map of Bengaluru.
